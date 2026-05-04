@@ -63,10 +63,19 @@
     <!-- Ações -->
     <div class="memorial-actions">
         <button class="btn-action btn-edit" onclick="toggleEditar()" id="btnEditar">
-            ✏️ Editar Memorial
+            ✏️ Editar
+        </button>
+        <button class="btn-action btn-copy" onclick="copiarTexto()">
+            📋 Copiar Texto
+        </button>
+        <button class="btn-action btn-share" onclick="compartilhar()">
+            🔗 Compartilhar
+        </button>
+        <button class="btn-action btn-print" onclick="window.print()">
+            🖨️ Imprimir
         </button>
         <a href="{{ url_for('ver_dados', memorial_id=memorial.id) }}" class="btn-action btn-dados">
-            📊 Ver Dados Extraídos
+            📊 Dados Extraídos
         </a>
         <form action="{{ url_for('remover_memorial', memorial_id=memorial.id) }}"
               method="POST" class="inline-form"
@@ -76,6 +85,9 @@
             </button>
         </form>
     </div>
+
+    <!-- Toast de feedback -->
+    <div class="copy-toast" id="copyToast"></div>
 
     <!-- Formulário de edição (oculto por padrão) -->
     <div class="edit-section" id="editSection" style="display:none">
@@ -108,10 +120,39 @@ function toggleEditar() {
     if (section.style.display === 'none') {
         section.style.display = 'block';
         section.scrollIntoView({ behavior: 'smooth' });
-        btn.textContent = '✕ Fechar Edição';
+        btn.textContent = '✕ Fechar';
     } else {
         section.style.display = 'none';
-        btn.textContent = '✏️ Editar Memorial';
+        btn.textContent = '✏️ Editar';
+    }
+}
+
+function mostrarToast(msg) {
+    const toast = document.getElementById('copyToast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+function copiarTexto() {
+    const paragrafos = document.querySelectorAll('.memorial-text-principal p');
+    const texto = Array.from(paragrafos).map(p => p.textContent.trim()).join('\n\n');
+    navigator.clipboard.writeText(texto)
+        .then(() => mostrarToast('✓ Texto copiado para a área de transferência!'))
+        .catch(() => mostrarToast('Não foi possível copiar automaticamente.'));
+}
+
+function compartilhar() {
+    const url = window.location.href;
+    if (navigator.share) {
+        navigator.share({
+            title: document.title,
+            url: url,
+        });
+    } else {
+        navigator.clipboard.writeText(url)
+            .then(() => mostrarToast('✓ Link copiado para a área de transferência!'))
+            .catch(() => mostrarToast('Copie o link na barra do navegador.'));
     }
 }
 </script>

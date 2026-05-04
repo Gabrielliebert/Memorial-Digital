@@ -113,6 +113,17 @@ def listar_memoriais() -> list:
     return [_row_to_dict(row) for row in rows]
 
 
+def buscar_memoriais_por_nome(query: str) -> list:
+    """Busca memoriais cujo nome contenha a query (case-insensitive)."""
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT * FROM memoriais WHERE nome LIKE ? ORDER BY criado_em DESC",
+        (f"%{query}%",),
+    ).fetchall()
+    conn.close()
+    return [_row_to_dict(row) for row in rows]
+
+
 def atualizar_memorial(memorial_id: int, titulo: str = None,
                        texto_principal: str = None,
                        secoes: list = None) -> bool:

@@ -1275,6 +1275,151 @@ a:hover { color: var(--accent-secondary); }
 }
 
 /* ═══════════════════════════════════════════════════
+   Search Form (memoriais.html)
+   ═══════════════════════════════════════════════════ */
+.search-form {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    align-items: center;
+}
+
+.search-wrapper {
+    position: relative;
+    flex: 1;
+}
+
+.search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    pointer-events: none;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.85rem 1rem 0.85rem 2.75rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.search-input:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.search-clear {
+    position: absolute;
+    right: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: color var(--transition-fast);
+    line-height: 1;
+}
+
+.search-clear:hover { color: var(--color-error); }
+
+.btn-search {
+    padding: 0.85rem 1.5rem;
+    background: var(--accent-primary);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.btn-search:hover {
+    background: var(--accent-secondary);
+    transform: translateY(-1px);
+}
+
+.meta-warning {
+    color: var(--color-warning);
+}
+
+/* ═══════════════════════════════════════════════════
+   Memorial Action Buttons extras
+   ═══════════════════════════════════════════════════ */
+.btn-print   { background: rgba(96, 165, 250, 0.12); color: var(--color-info); border-color: rgba(96, 165, 250, 0.25); }
+.btn-copy    { background: rgba(74, 222, 128, 0.12); color: var(--color-success); border-color: rgba(74, 222, 128, 0.25); }
+.btn-share   { background: rgba(251, 191, 36, 0.12); color: var(--color-warning); border-color: rgba(251, 191, 36, 0.25); }
+
+.btn-print:hover  { background: rgba(96, 165, 250, 0.22); }
+.btn-copy:hover   { background: rgba(74, 222, 128, 0.22); }
+.btn-share:hover  { background: rgba(251, 191, 36, 0.22); }
+
+/* Toast de feedback de cópia */
+.copy-toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-accent);
+    border-radius: var(--radius-md);
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+    color: var(--color-success);
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 300;
+    pointer-events: none;
+}
+
+.copy-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Aviso de timeout no loading */
+.loading-timeout {
+    margin-top: 1.5rem;
+    padding: 0.75rem 1.25rem;
+    background: rgba(251, 191, 36, 0.08);
+    border: 1px solid rgba(251, 191, 36, 0.2);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    color: var(--color-warning);
+    display: none;
+    text-align: center;
+}
+
+/* ═══════════════════════════════════════════════════
+   Print styles
+   ═══════════════════════════════════════════════════ */
+@media print {
+    .navbar, .footer, .memorial-actions, .edit-section,
+    .flash-container, .bg-particles { display: none !important; }
+
+    body { background: white; color: black; }
+
+    .memorial-header { background: #f5f5f5 !important; color: black !important; }
+    .memorial-header-bg { display: none; }
+    .memorial-nome, .memorial-titulo, .meta-item { color: black !important; }
+    .memorial-text-principal { background: white; border: 1px solid #ccc; }
+    .memorial-text-principal p { color: black !important; }
+    .quote-mark { color: #aaa !important; }
+    .secao-card { background: #f9f9f9; border: 1px solid #ddd; }
+    .secao-titulo, .secao-conteudo p { color: black !important; }
+}
+
+/* ═══════════════════════════════════════════════════
    Responsive
    ═══════════════════════════════════════════════════ */
 @media (max-width: 640px) {
@@ -1319,4 +1464,3 @@ a:hover { color: var(--accent-secondary); }
         grid-template-columns: 1fr;
     }
 }
-

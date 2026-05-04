@@ -18,10 +18,11 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 import json
 import threading
 import traceback
+import time
 
 import config
 from models import init_db, salvar_memorial, buscar_memorial, listar_memoriais, \
-    atualizar_memorial, deletar_memorial
+    atualizar_memorial, deletar_memorial, buscar_memoriais_por_nome
 from modules.scraper import coletar_lattes
 from modules.parser import parse_lattes
 from modules.generator import gerar_memorial
@@ -35,6 +36,21 @@ init_db()
 
 # Estado global para tarefas em andamento
 tarefas = {}
+_tarefas_lock = threading.Lock()
+TAREFA_TTL = 3600  # segundos antes de limpar tarefas concluídas/com erro
+
+
+def _limpar_tarefas_antigas():
+    """Remove tarefas finalizadas mais antigas que TAREFA_TTL segundos."""
+    agora = time.time()
+    with _tarefas_lock:
+        expiradas = [
+            tid for tid, t in tarefas.items()
+            if t.get("status") in ("concluido", "erro")
+            and agora - t.get("_timestamp", agora) > TAREFA_TTL
+        ]
+        for tid in expiradas:
+            del tarefas[tid]
 
 
 # ── Rotas ────────────────────────────────────────────
@@ -60,6 +76,9 @@ def gerar():
         flash("A URL deve ser de um currículo Lattes (lattes.cnpq.br).", "erro")
         return redirect(url_for("index"))
 
+    # Limpar tarefas antigas antes de criar nova
+    _limpar_tarefas_antigas()
+
     # Iniciar processamento em thread separada
     import uuid
     task_id = str(uuid.uuid4())[:8]
@@ -69,6 +88,7 @@ def gerar():
         "mensagem": "Abrindo navegador para coleta do Lattes...",
         "memorial_id": None,
         "erro": None,
+        "_timestamp": time.time(),
     }
 
     thread = threading.Thread(
@@ -102,9 +122,13 @@ def ver_memorial(memorial_id):
 
 @app.route("/memoriais")
 def lista_memoriais():
-    """Lista todos os memoriais salvos."""
-    memoriais = listar_memoriais()
-    return render_template("memoriais.html", memoriais=memoriais)
+    """Lista todos os memoriais salvos, com suporte a busca."""
+    q = request.args.get("q", "").strip()
+    if q:
+        memoriais = buscar_memoriais_por_nome(q)
+    else:
+        memoriais = listar_memoriais()
+    return render_template("memoriais.html", memoriais=memoriais, query=q)
 
 
 @app.route("/memorial/<int:memorial_id>/editar", methods=["POST"])
@@ -188,6 +212,7 @@ def _pipeline_memorial(task_id: str, url_lattes: str):
         tarefas[task_id]["progresso"] = 100
         tarefas[task_id]["mensagem"] = "Memorial gerado com sucesso!"
         tarefas[task_id]["memorial_id"] = memorial_id
+        tarefas[task_id]["_timestamp"] = time.time()
 
     except Exception as e:
         print(f"[Pipeline] ✗ Erro: {e}")
@@ -196,6 +221,7 @@ def _pipeline_memorial(task_id: str, url_lattes: str):
         tarefas[task_id]["progresso"] = 0
         tarefas[task_id]["mensagem"] = f"Erro: {str(e)}"
         tarefas[task_id]["erro"] = str(e)
+        tarefas[task_id]["_timestamp"] = time.time()
 
 
 # ── Iniciar ──────────────────────────────────────────

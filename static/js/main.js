@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initFlashMessages();
     initFormValidation();
     initScrollAnimations();
+    initParticles();
 });
 
 /**
@@ -40,16 +41,13 @@ function initFormValidation() {
             return;
         }
 
-        // Disable button to prevent double submit
         btn.disabled = true;
         btn.innerHTML = '<span class="btn-text">Iniciando...</span> <span class="btn-spinner"></span>';
     });
 
     const input = document.getElementById('urlLattes');
     if (input) {
-        input.addEventListener('input', () => {
-            input.classList.remove('input-error');
-        });
+        input.addEventListener('input', () => input.classList.remove('input-error'));
     }
 }
 
@@ -60,10 +58,8 @@ function initScrollAnimations() {
     const elements = document.querySelectorAll(
         '.step-card, .memorial-card, .secao-card, .memorial-list-item, .dados-card'
     );
-
     if (!elements.length) return;
 
-    // Add initial hidden state
     elements.forEach(el => {
         el.style.opacity = '0';
         el.style.transform = 'translateY(20px)';
@@ -80,15 +76,74 @@ function initScrollAnimations() {
                 observer.unobserve(entry.target);
             }
         });
-    }, {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    });
+    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
 
     elements.forEach(el => observer.observe(el));
 }
 
-// Add CSS for slideOut animation
+/**
+ * Canvas particle animation for background.
+ */
+function initParticles() {
+    const container = document.getElementById('bgParticles');
+    if (!container) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
+    container.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+
+    let W, H, particles;
+
+    const PARTICLE_COUNT = 60;
+    const ACCENT = [139, 124, 245]; // --accent-primary rgb
+
+    function resize() {
+        W = canvas.width = window.innerWidth;
+        H = canvas.height = Math.max(document.body.scrollHeight, window.innerHeight);
+    }
+
+    function createParticle() {
+        return {
+            x: Math.random() * W,
+            y: Math.random() * H,
+            r: Math.random() * 1.8 + 0.4,
+            opacity: Math.random() * 0.35 + 0.05,
+            vx: (Math.random() - 0.5) * 0.25,
+            vy: (Math.random() - 0.5) * 0.25,
+        };
+    }
+
+    function init() {
+        resize();
+        particles = Array.from({ length: PARTICLE_COUNT }, createParticle);
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, W, H);
+        particles.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(${ACCENT[0]},${ACCENT[1]},${ACCENT[2]},${p.opacity})`;
+            ctx.fill();
+
+            p.x += p.vx;
+            p.y += p.vy;
+
+            if (p.x < 0) p.x = W;
+            if (p.x > W) p.x = 0;
+            if (p.y < 0) p.y = H;
+            if (p.y > H) p.y = 0;
+        });
+        requestAnimationFrame(draw);
+    }
+
+    window.addEventListener('resize', () => { resize(); });
+    init();
+    draw();
+}
+
+// CSS dinâmico para animações inline
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideOut {

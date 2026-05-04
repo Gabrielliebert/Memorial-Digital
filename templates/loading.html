@@ -44,6 +44,11 @@
             <span class="tip-icon">💡</span>
             <span id="loadingTip">Se uma janela do navegador abriu, resolva o CAPTCHA para continuar.</span>
         </div>
+
+        <div class="loading-timeout" id="timeoutWarning">
+            ⏱️ A geração está demorando mais que o esperado. Modelos maiores podem levar até 5 minutos.
+            <br><a href="/" style="color:var(--color-warning);text-decoration:underline;margin-top:0.5rem;display:inline-block;">Cancelar e voltar ao início</a>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -113,6 +118,12 @@
                 setTimeout(pollStatus, 3000);
             });
     }
+
+    // Aviso de timeout após 3 minutos
+    setTimeout(() => {
+        const w = document.getElementById('timeoutWarning');
+        if (w) w.style.display = 'block';
+    }, 180000);
 
     // Iniciar polling
     setTimeout(pollStatus, 2000);

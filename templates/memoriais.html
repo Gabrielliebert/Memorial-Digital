@@ -6,9 +6,33 @@
     <div class="page-header">
         <h1 class="page-title">Memoriais Salvos</h1>
         <p class="page-subtitle">
-            {{ memoriais|length }} memorial(is) no banco de dados
+            {% if query %}
+                {{ memoriais|length }} resultado(s) para "<strong>{{ query }}</strong>"
+            {% else %}
+                {{ memoriais|length }} memorial(is) no banco de dados
+            {% endif %}
         </p>
     </div>
+
+    <!-- Barra de Busca -->
+    <form action="{{ url_for('lista_memoriais') }}" method="GET" class="search-form" id="searchForm">
+        <div class="search-wrapper">
+            <span class="search-icon">🔍</span>
+            <input
+                type="text"
+                name="q"
+                id="searchInput"
+                value="{{ query or '' }}"
+                placeholder="Buscar por nome do pesquisador..."
+                class="search-input"
+                autocomplete="off"
+            >
+            {% if query %}
+            <a href="{{ url_for('lista_memoriais') }}" class="search-clear" title="Limpar busca">✕</a>
+            {% endif %}
+        </div>
+        <button type="submit" class="btn-search">Buscar</button>
+    </form>
 
     {% if memoriais %}
     <div class="memoriais-list">
@@ -26,6 +50,9 @@
                         {% if m.url_lattes %}
                         <span>🔗 Lattes</span>
                         {% endif %}
+                        {% if m.metadata and m.metadata.get('alertas') %}
+                        <span class="meta-warning">⚠ {{ m.metadata.alertas|length }} alerta(s)</span>
+                        {% endif %}
                     </div>
                 </div>
             </a>
@@ -36,6 +63,15 @@
             </form>
         </div>
         {% endfor %}
+    </div>
+    {% elif query %}
+    <div class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <h3>Nenhum resultado encontrado</h3>
+        <p>Nenhum memorial encontrado para "<strong>{{ query }}</strong>".</p>
+        <a href="{{ url_for('lista_memoriais') }}" class="btn-secondary" style="display:inline-flex; margin-top:1.5rem">
+            Ver todos os memoriais
+        </a>
     </div>
     {% else %}
     <div class="empty-state">
@@ -48,4 +84,21 @@
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Busca instantânea com debounce
+const searchInput = document.getElementById('searchInput');
+if (searchInput) {
+    let debounceTimer;
+    searchInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            document.getElementById('searchForm').submit();
+        }, 500);
+    });
+    searchInput.focus();
+}
+</script>
 {% endblock %}
