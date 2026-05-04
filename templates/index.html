@@ -36,6 +36,26 @@
                 Ex: http://lattes.cnpq.br/0000000000000000
             </p>
         </form>
+
+        <!-- Fontes alternativas -->
+        <div class="fontes-grid">
+            <a href="{{ url_for('formulario_manual') }}" class="fonte-card">
+                <div class="fonte-card-icon">✍️</div>
+                <div class="fonte-card-title">Entrada Manual</div>
+                <div class="fonte-card-desc">
+                    Sem Lattes? Preencha um formulário ou cole um JSON com os dados.
+                    Mais alinhado ao princípio de volição.
+                </div>
+            </a>
+            <div class="fonte-card" style="opacity:0.55;cursor:not-allowed">
+                <div class="fonte-card-icon">🌐</div>
+                <div class="fonte-card-title">Outras Fontes</div>
+                <div class="fonte-card-desc">
+                    LinkedIn / Escavador / ORCID — em breve. Por enquanto,
+                    use o JSON manual.
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

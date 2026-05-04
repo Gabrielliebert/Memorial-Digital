@@ -65,6 +65,9 @@
         <button class="btn-action btn-edit" onclick="toggleEditar()" id="btnEditar">
             ✏️ Editar
         </button>
+        <a href="{{ url_for('configurar_memorial', memorial_id=memorial.id) }}" class="btn-action btn-edit">
+            ⚙️ Configurar
+        </a>
         <button class="btn-action btn-copy" onclick="copiarTexto()">
             📋 Copiar Texto
         </button>
@@ -85,6 +88,57 @@
             </button>
         </form>
     </div>
+
+    <!-- Tributos ─────────────────────────────── -->
+    {% if memorial.permitir_tributos %}
+    <section class="tributos-section">
+        <h2 class="secao-titulo" style="text-align:center">
+            💬 Tributos
+            {% if tributos %}<span class="badge">{{ tributos|length }}</span>{% endif %}
+        </h2>
+
+        {% if tributos %}
+        <div class="tributos-list">
+            {% for t in tributos %}
+            <div class="tributo-card">
+                <div class="tributo-header">
+                    <strong>{{ t.autor }}</strong>
+                    <span class="tributo-data">{{ t.criado_em[:10] }}</span>
+                </div>
+                <p class="tributo-mensagem">{{ t.mensagem }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted" style="text-align:center;padding:1rem">
+            Seja o primeiro a deixar um tributo.
+        </p>
+        {% endif %}
+
+        <!-- Formulário de tributo -->
+        <form action="{{ url_for('enviar_tributo', memorial_id=memorial.id) }}"
+              method="POST" class="manual-form" style="margin-top:1.5rem">
+            <div class="form-group">
+                <label for="autor" class="form-label">Seu nome</label>
+                <input type="text" name="autor" id="autor" class="form-input"
+                       maxlength="80" required>
+            </div>
+            <div class="form-group">
+                <label for="mensagem" class="form-label">Sua mensagem</label>
+                <textarea name="mensagem" id="mensagem" class="form-textarea"
+                          rows="4" maxlength="1000" required
+                          placeholder="Compartilhe uma lembrança ou uma palavra de respeito..."></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn-gerar">💌 Enviar tributo</button>
+            </div>
+            <p class="form-hint">
+                Tributos passam por moderação antes de serem publicados,
+                garantindo um espaço respeitoso e seguro.
+            </p>
+        </form>
+    </section>
+    {% endif %}
 
     <!-- Toast de feedback -->
     <div class="copy-toast" id="copyToast"></div>

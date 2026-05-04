@@ -22,9 +22,11 @@ import time
 
 import config
 from models import init_db, salvar_memorial, buscar_memorial, listar_memoriais, \
-    atualizar_memorial, deletar_memorial, buscar_memoriais_por_nome
-from modules.scraper import coletar_lattes
-from modules.parser import parse_lattes
+    atualizar_memorial, deletar_memorial, buscar_memoriais_por_nome, \
+    atualizar_configuracao_memorial, adicionar_tributo, listar_tributos, \
+    moderar_tributo, deletar_tributo
+from modules.sources import coletar_lattes_completo
+from modules.sources.manual import construir_dados_manuais, construir_dados_de_json
 from modules.generator import gerar_memorial
 
 # ── Inicialização ────────────────────────────────────
@@ -64,36 +66,66 @@ def index():
 
 @app.route("/gerar", methods=["POST"])
 def gerar():
-    """Inicia o pipeline de geração do memorial."""
+    """Inicia o pipeline de geração via Lattes."""
     url_lattes = request.form.get("url_lattes", "").strip()
 
     if not url_lattes:
         flash("Por favor, insira a URL do currículo Lattes.", "erro")
         return redirect(url_for("index"))
 
-    # Validar URL básica
     if "lattes.cnpq" not in url_lattes and "localhost" not in url_lattes:
         flash("A URL deve ser de um currículo Lattes (lattes.cnpq.br).", "erro")
         return redirect(url_for("index"))
 
-    # Limpar tarefas antigas antes de criar nova
+    return _iniciar_pipeline(fonte="lattes", origem=url_lattes)
+
+
+@app.route("/manual", methods=["GET"])
+def formulario_manual():
+    """Exibe o formulário para entrada manual de dados."""
+    return render_template("manual.html")
+
+
+@app.route("/gerar_manual", methods=["POST"])
+def gerar_manual():
+    """Inicia o pipeline a partir de dados informados manualmente."""
+    payload_json = (request.form.get("dados_json") or "").strip()
+
+    try:
+        if payload_json:
+            dados = construir_dados_de_json(payload_json)
+        else:
+            dados = construir_dados_manuais(request.form)
+    except ValueError as e:
+        flash(f"Erro nos dados: {e}", "erro")
+        return redirect(url_for("formulario_manual"))
+
+    return _iniciar_pipeline(fonte="manual", origem="formulario", dados_pre_coletados=dados)
+
+
+def _iniciar_pipeline(fonte: str, origem: str, dados_pre_coletados: dict = None):
+    """Cria a tarefa e dispara a thread do pipeline."""
     _limpar_tarefas_antigas()
 
-    # Iniciar processamento em thread separada
     import uuid
     task_id = str(uuid.uuid4())[:8]
     tarefas[task_id] = {
-        "status": "coletando",
-        "progresso": 10,
-        "mensagem": "Abrindo navegador para coleta do Lattes...",
+        "status": "coletando" if not dados_pre_coletados else "extraindo",
+        "progresso": 10 if not dados_pre_coletados else 50,
+        "mensagem": (
+            "Abrindo navegador para coleta do Lattes..."
+            if not dados_pre_coletados
+            else "Processando dados informados..."
+        ),
         "memorial_id": None,
         "erro": None,
+        "fonte": fonte,
         "_timestamp": time.time(),
     }
 
     thread = threading.Thread(
         target=_pipeline_memorial,
-        args=(task_id, url_lattes),
+        args=(task_id, fonte, origem, dados_pre_coletados),
         daemon=True,
     )
     thread.start()
@@ -112,12 +144,105 @@ def status_tarefa(task_id):
 
 @app.route("/memorial/<int:memorial_id>")
 def ver_memorial(memorial_id):
-    """Exibe o memorial gerado."""
+    """Exibe o memorial gerado, respeitando configuração de visibilidade."""
     memorial = buscar_memorial(memorial_id)
     if not memorial:
         flash("Memorial não encontrado.", "erro")
         return redirect(url_for("index"))
-    return render_template("memorial.html", memorial=memorial)
+
+    # Privacidade: memoriais privados só são acessíveis com chave (futuro: auth real)
+    if memorial.get("visibilidade") == "privado":
+        chave = request.args.get("k", "")
+        if chave != f"k{memorial_id * 7919}":  # placeholder simples
+            flash("Este memorial é privado.", "erro")
+            return redirect(url_for("index"))
+
+    tributos = listar_tributos(memorial_id, apenas_aprovados=True)
+    return render_template("memorial.html", memorial=memorial, tributos=tributos)
+
+
+@app.route("/memorial/<int:memorial_id>/configurar", methods=["GET", "POST"])
+def configurar_memorial(memorial_id):
+    """UI de configuração: privacidade, status, gestor de legado."""
+    memorial = buscar_memorial(memorial_id)
+    if not memorial:
+        flash("Memorial não encontrado.", "erro")
+        return redirect(url_for("index"))
+
+    if request.method == "POST":
+        atualizar_configuracao_memorial(
+            memorial_id,
+            visibilidade=request.form.get("visibilidade", "publico"),
+            memorial_status=request.form.get("memorial_status", "ativo"),
+            legacy_manager_email=request.form.get("legacy_manager_email", "").strip() or None,
+            consentimento=1 if request.form.get("consentimento") else 0,
+            permitir_tributos=1 if request.form.get("permitir_tributos") else 0,
+        )
+        flash("Configurações atualizadas.", "sucesso")
+        return redirect(url_for("configurar_memorial", memorial_id=memorial_id))
+
+    return render_template("configurar.html", memorial=memorial)
+
+
+@app.route("/memorial/<int:memorial_id>/tributo", methods=["POST"])
+def enviar_tributo(memorial_id):
+    """Recebe um tributo (entra em moderação antes de aparecer)."""
+    memorial = buscar_memorial(memorial_id)
+    if not memorial:
+        flash("Memorial não encontrado.", "erro")
+        return redirect(url_for("index"))
+
+    if not memorial.get("permitir_tributos", 1):
+        flash("Este memorial não está aceitando tributos.", "info")
+        return redirect(url_for("ver_memorial", memorial_id=memorial_id))
+
+    autor = (request.form.get("autor") or "").strip()
+    mensagem = (request.form.get("mensagem") or "").strip()
+
+    if not autor or not mensagem:
+        flash("Informe seu nome e mensagem.", "erro")
+        return redirect(url_for("ver_memorial", memorial_id=memorial_id))
+
+    if len(mensagem) > 1000:
+        flash("Mensagem muito longa (máx. 1000 caracteres).", "erro")
+        return redirect(url_for("ver_memorial", memorial_id=memorial_id))
+
+    adicionar_tributo(memorial_id, autor, mensagem)
+    flash("Tributo recebido! Aguardando moderação antes de ser publicado.", "sucesso")
+    return redirect(url_for("ver_memorial", memorial_id=memorial_id))
+
+
+@app.route("/memorial/<int:memorial_id>/tributos/moderar")
+def moderar_tributos(memorial_id):
+    """Painel de moderação de tributos (acesso simples por enquanto)."""
+    memorial = buscar_memorial(memorial_id)
+    if not memorial:
+        flash("Memorial não encontrado.", "erro")
+        return redirect(url_for("index"))
+
+    todos = listar_tributos(memorial_id, apenas_aprovados=False)
+    return render_template("moderar.html", memorial=memorial, tributos=todos)
+
+
+@app.route("/tributo/<int:tributo_id>/<acao>", methods=["POST"])
+def acao_tributo(tributo_id, acao):
+    """Aprova, rejeita ou remove um tributo."""
+    memorial_id = int(request.form.get("memorial_id", 0))
+    if acao == "aprovar":
+        moderar_tributo(tributo_id, "aprovado")
+        flash("Tributo aprovado e publicado.", "sucesso")
+    elif acao == "rejeitar":
+        moderar_tributo(tributo_id, "rejeitado")
+        flash("Tributo rejeitado.", "info")
+    elif acao == "deletar":
+        deletar_tributo(tributo_id)
+        flash("Tributo removido.", "info")
+    else:
+        flash("Ação inválida.", "erro")
+
+    if memorial_id:
+        return redirect(url_for("moderar_tributos", memorial_id=memorial_id))
+    return redirect(url_for("index"))
 
 
 @app.route("/memoriais")
@@ -167,35 +292,36 @@ def ver_dados(memorial_id):
 
 # ── Pipeline ─────────────────────────────────────────
 
-def _pipeline_memorial(task_id: str, url_lattes: str):
+def _pipeline_memorial(task_id: str, fonte: str, origem: str,
+                       dados_pre_coletados: dict = None):
     """
     Pipeline completo de geração do memorial.
-    Executado em thread separada.
+    Executado em thread separada. Suporta múltiplas fontes.
     """
     try:
-        # Etapa 1: Coleta
-        tarefas[task_id]["status"] = "coletando"
-        tarefas[task_id]["progresso"] = 20
-        tarefas[task_id]["mensagem"] = (
-            "Navegador aberto — resolva o CAPTCHA na janela do Chromium."
-        )
+        # Etapa 1+2: Coleta e Parsing (ou dados já fornecidos)
+        if dados_pre_coletados is not None:
+            dados = dados_pre_coletados
+        else:
+            tarefas[task_id]["status"] = "coletando"
+            tarefas[task_id]["progresso"] = 20
+            tarefas[task_id]["mensagem"] = (
+                "Navegador aberto — resolva o CAPTCHA na janela do Chromium."
+            )
+            dados = coletar_lattes_completo(origem)
 
-        html = coletar_lattes(url_lattes)
+            tarefas[task_id]["status"] = "extraindo"
+            tarefas[task_id]["progresso"] = 50
+            tarefas[task_id]["mensagem"] = "Extraindo dados do currículo..."
 
-        # Etapa 2: Parsing
-        tarefas[task_id]["status"] = "extraindo"
-        tarefas[task_id]["progresso"] = 50
-        tarefas[task_id]["mensagem"] = "Extraindo dados do currículo..."
-
-        dados = parse_lattes(html)
         nome = dados.get("nome", "Pesquisador(a)")
-        print(f"[Pipeline] Dados extraídos para: {nome}")
+        print(f"[Pipeline] Dados ({fonte}) preparados para: {nome}")
 
         # Etapa 3: Geração
         tarefas[task_id]["status"] = "gerando"
         tarefas[task_id]["progresso"] = 70
         tarefas[task_id]["mensagem"] = (
-            f"Gerando memorial para {nome} via Gemini API..."
+            f"Gerando memorial para {nome}..."
         )
 
         resultado = gerar_memorial(dados)
@@ -205,9 +331,8 @@ def _pipeline_memorial(task_id: str, url_lattes: str):
         tarefas[task_id]["progresso"] = 90
         tarefas[task_id]["mensagem"] = "Salvando memorial no banco de dados..."
 
-        memorial_id = salvar_memorial(nome, url_lattes, dados, resultado)
+        memorial_id = salvar_memorial(nome, origem, dados, resultado)
 
-        # Concluído
         tarefas[task_id]["status"] = "concluido"
         tarefas[task_id]["progresso"] = 100
         tarefas[task_id]["mensagem"] = "Memorial gerado com sucesso!"
