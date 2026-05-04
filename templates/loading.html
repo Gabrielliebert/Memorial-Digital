@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Gerando Memorial...{% endblock %}
+
+{% block content %}
+<div class="loading-page">
+    <div class="loading-container">
+        <div class="loading-orb">
+            <div class="orb-ring orb-ring-1"></div>
+            <div class="orb-ring orb-ring-2"></div>
+            <div class="orb-ring orb-ring-3"></div>
+            <div class="orb-core"></div>
+        </div>
+
+        <h2 class="loading-title" id="loadingTitle">Gerando Memorial...</h2>
+        <p class="loading-message" id="loadingMessage">
+            Iniciando o pipeline de geração...
+        </p>
+
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progressBar" style="width: 5%"></div>
+        </div>
+        <span class="progress-text" id="progressText">5%</span>
+
+        <div class="loading-steps">
+            <div class="loading-step active" id="step-coletando">
+                <span class="step-dot"></span>
+                <span>Coletando dados do Lattes</span>
+            </div>
+            <div class="loading-step" id="step-extraindo">
+                <span class="step-dot"></span>
+                <span>Extraindo informações</span>
+            </div>
+            <div class="loading-step" id="step-gerando">
+                <span class="step-dot"></span>
+                <span>Gerando texto com IA</span>
+            </div>
+            <div class="loading-step" id="step-salvando">
+                <span class="step-dot"></span>
+                <span>Salvando memorial</span>
+            </div>
+        </div>
+
+        <div class="loading-tip">
+            <span class="tip-icon">💡</span>
+            <span id="loadingTip">Se uma janela do navegador abriu, resolva o CAPTCHA para continuar.</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const taskId = "{{ task_id }}";
+    const statusUrl = "/status/" + taskId;
+
+    const steps = ["coletando", "extraindo", "gerando", "salvando", "concluido"];
+    const tips = [
+        "Se uma janela do navegador abriu, resolva o CAPTCHA para continuar.",
+        "Os dados estão sendo organizados em categorias...",
+        "A IA está redigindo o memorial com base nos dados extraídos.",
+        "Quase lá! Salvando no banco de dados...",
+    ];
+
+    function pollStatus() {
+        fetch(statusUrl)
+            .then(r => r.json())
+            .then(data => {
+                // Atualizar mensagem
+                document.getElementById("loadingMessage").textContent = data.mensagem || "";
+
+                // Atualizar barra de progresso
+                const pct = data.progresso || 0;
+                document.getElementById("progressBar").style.width = pct + "%";
+                document.getElementById("progressText").textContent = pct + "%";
+
+                // Atualizar steps visuais
+                const currentIdx = steps.indexOf(data.status);
+                steps.forEach((step, idx) => {
+                    const el = document.getElementById("step-" + step);
+                    if (!el) return;
+                    el.classList.remove("active", "done");
+                    if (idx < currentIdx) el.classList.add("done");
+                    else if (idx === currentIdx) el.classList.add("active");
+                });
+
+                // Atualizar tip
+                if (currentIdx >= 0 && currentIdx < tips.length) {
+                    document.getElementById("loadingTip").textContent = tips[currentIdx];
+                }
+
+                // Verificar fim
+                if (data.status === "concluido" && data.memorial_id) {
+                    document.getElementById("loadingTitle").textContent = "Memorial Gerado! ✓";
+                    setTimeout(() => {
+                        window.location.href = "/memorial/" + data.memorial_id;
+                    }, 1000);
+                    return;
+                }
+
+                if (data.status === "erro") {
+                    document.getElementById("loadingTitle").textContent = "Erro na Geração";
+                    document.getElementById("loadingMessage").textContent = data.mensagem;
+                    document.querySelector(".loading-orb").classList.add("error");
+                    document.querySelector(".loading-tip").innerHTML =
+                        '<a href="/" class="btn-secondary" style="margin-top:1rem">← Voltar ao início</a>';
+                    return;
+                }
+
+                // Continuar polling
+                setTimeout(pollStatus, 2000);
+            })
+            .catch(() => {
+                setTimeout(pollStatus, 3000);
+            });
+    }
+
+    // Iniciar polling
+    setTimeout(pollStatus, 2000);
+</script>
+{% endblock %}

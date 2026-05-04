@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}{{ memorial.titulo or 'Memorial' }}{% endblock %}
+
+{% block content %}
+<article class="memorial-page">
+    <!-- Header do Memorial -->
+    <header class="memorial-header">
+        <div class="memorial-header-bg"></div>
+        <div class="memorial-header-content">
+            <div class="memorial-avatar-lg">
+                {{ memorial.nome[0] if memorial.nome else '?' }}
+            </div>
+            <h1 class="memorial-nome">{{ memorial.nome }}</h1>
+            <p class="memorial-titulo">{{ memorial.titulo }}</p>
+            <div class="memorial-meta">
+                <span class="meta-item">
+                    📅 Criado em {{ memorial.criado_em[:10] if memorial.criado_em else 'N/A' }}
+                </span>
+                {% if memorial.metadata and memorial.metadata.get('modelo') %}
+                <span class="meta-item">
+                    🧠 {{ memorial.metadata.modelo }}
+                </span>
+                {% endif %}
+                {% if memorial.metadata and memorial.metadata.get('alertas') %}
+                <span class="meta-item meta-warning">
+                    ⚠ {{ memorial.metadata.alertas|length }} alerta(s) de validação
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <!-- Texto Principal -->
+    <section class="memorial-body">
+        <div class="memorial-text-principal">
+            <div class="quote-mark">"</div>
+            {% for paragrafo in memorial.texto_principal.split('\n') %}
+                {% if paragrafo.strip() %}
+                <p>{{ paragrafo }}</p>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- Seções adicionais -->
+        {% if memorial.secoes %}
+        <div class="memorial-secoes">
+            {% for secao in memorial.secoes %}
+            <div class="secao-card">
+                <h2 class="secao-titulo">{{ secao.titulo }}</h2>
+                <div class="secao-conteudo">
+                    {% for paragrafo in secao.conteudo.split('\n') %}
+                        {% if paragrafo.strip() %}
+                        <p>{{ paragrafo }}</p>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </section>
+
+    <!-- Ações -->
+    <div class="memorial-actions">
+        <button class="btn-action btn-edit" onclick="toggleEditar()" id="btnEditar">
+            ✏️ Editar Memorial
+        </button>
+        <a href="{{ url_for('ver_dados', memorial_id=memorial.id) }}" class="btn-action btn-dados">
+            📊 Ver Dados Extraídos
+        </a>
+        <form action="{{ url_for('remover_memorial', memorial_id=memorial.id) }}"
+              method="POST" class="inline-form"
+              onsubmit="return confirm('Tem certeza que deseja remover este memorial?')">
+            <button type="submit" class="btn-action btn-delete">
+                🗑️ Remover
+            </button>
+        </form>
+    </div>
+
+    <!-- Formulário de edição (oculto por padrão) -->
+    <div class="edit-section" id="editSection" style="display:none">
+        <form action="{{ url_for('editar_memorial', memorial_id=memorial.id) }}" method="POST">
+            <h3 class="edit-title">Editar Memorial</h3>
+            <div class="form-group">
+                <label for="editTitulo" class="form-label">Título</label>
+                <input type="text" name="titulo" id="editTitulo"
+                       value="{{ memorial.titulo }}" class="form-input">
+            </div>
+            <div class="form-group">
+                <label for="editTexto" class="form-label">Texto Principal</label>
+                <textarea name="texto_principal" id="editTexto"
+                          class="form-textarea" rows="12">{{ memorial.texto_principal }}</textarea>
+            </div>
+            <div class="edit-actions">
+                <button type="submit" class="btn-gerar">💾 Salvar Alterações</button>
+                <button type="button" class="btn-secondary" onclick="toggleEditar()">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</article>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleEditar() {
+    const section = document.getElementById('editSection');
+    const btn = document.getElementById('btnEditar');
+    if (section.style.display === 'none') {
+        section.style.display = 'block';
+        section.scrollIntoView({ behavior: 'smooth' });
+        btn.textContent = '✕ Fechar Edição';
+    } else {
+        section.style.display = 'none';
+        btn.textContent = '✏️ Editar Memorial';
+    }
+}
+</script>
+{% endblock %}

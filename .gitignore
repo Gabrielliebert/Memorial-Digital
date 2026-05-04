@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Variáveis de ambiente (contém chaves de API)
+.env
+
+# Banco de dados
+data/memorial.db
+data/memorial.db-shm
+data/memorial.db-wal
+
+# Playwright
+playwright/.auth/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Arquivos temporários de dump (debug local)
+last_memorial_dump.json
+last_memorial_text.md
+
+# Pasta temporária de trabalho do Claude
+.tmp_improved/
+
+# Configurações locais do Claude Code
+.claude/

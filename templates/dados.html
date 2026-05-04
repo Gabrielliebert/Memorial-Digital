@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Dados Extraídos — {{ memorial.nome }}{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <a href="{{ url_for('ver_memorial', memorial_id=memorial.id) }}" class="back-link">← Voltar ao Memorial</a>
+        <h1 class="page-title">Dados Extraídos</h1>
+        <p class="page-subtitle">
+            Dados brutos do currículo de <strong>{{ memorial.nome }}</strong>,
+            utilizados para gerar o memorial.
+        </p>
+    </div>
+
+    {% if memorial.dados %}
+    <div class="dados-grid">
+        {% for chave, valor in memorial.dados.items() %}
+        <div class="dados-card">
+            <h3 class="dados-card-title">
+                {% if chave == 'nome' %}👤 Nome
+                {% elif chave == 'resumo' %}📝 Resumo
+                {% elif chave == 'formacao' %}🎓 Formação Acadêmica
+                {% elif chave == 'atuacao_profissional' %}💼 Atuação Profissional
+                {% elif chave == 'areas_atuacao' %}🔬 Áreas de Atuação
+                {% elif chave == 'producoes_bibliograficas' %}📚 Produções Bibliográficas
+                {% elif chave == 'orientacoes' %}👥 Orientações
+                {% elif chave == 'projetos' %}📋 Projetos
+                {% elif chave == 'premios' %}🏆 Prêmios e Títulos
+                {% elif chave == 'idiomas' %}🌍 Idiomas
+                {% else %}📌 {{ chave|capitalize }}
+                {% endif %}
+            </h3>
+            <div class="dados-card-content">
+                {% if valor is string %}
+                    <p>{{ valor if valor else '<em class="text-muted">Não encontrado</em>'|safe }}</p>
+                {% elif valor is iterable %}
+                    {% if valor|length > 0 %}
+                    <ul class="dados-list">
+                        {% for item in valor %}
+                        <li>
+                            {% if item is mapping %}
+                                {{ item.get('descricao', item|string) }}
+                                {% if item.get('tipo') %}
+                                    <span class="dados-tag">{{ item.tipo }}</span>
+                                {% endif %}
+                                {% if item.get('nivel') %}
+                                    <span class="dados-tag tag-nivel">{{ item.nivel }}</span>
+                                {% endif %}
+                                {% if item.get('ano') %}
+                                    <span class="dados-tag tag-ano">{{ item.ano }}</span>
+                                {% endif %}
+                            {% else %}
+                                {{ item }}
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="text-muted"><em>Nenhum dado encontrado nesta categoria.</em></p>
+                    {% endif %}
+                {% else %}
+                    <p>{{ valor }}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- JSON bruto -->
+    <details class="json-details">
+        <summary class="json-summary">🔧 Ver JSON bruto completo</summary>
+        <pre class="json-raw"><code>{{ memorial.dados_json }}</code></pre>
+    </details>
+    {% else %}
+    <div class="empty-state">
+        <p>Dados não disponíveis para este memorial.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

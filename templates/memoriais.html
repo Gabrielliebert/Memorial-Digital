@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Todos os Memoriais{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <h1 class="page-title">Memoriais Salvos</h1>
+        <p class="page-subtitle">
+            {{ memoriais|length }} memorial(is) no banco de dados
+        </p>
+    </div>
+
+    {% if memoriais %}
+    <div class="memoriais-list">
+        {% for m in memoriais %}
+        <div class="memorial-list-item">
+            <a href="{{ url_for('ver_memorial', memorial_id=m.id) }}" class="memorial-list-link">
+                <div class="memorial-list-avatar">{{ m.nome[0] if m.nome else '?' }}</div>
+                <div class="memorial-list-info">
+                    <h3 class="memorial-list-name">{{ m.nome }}</h3>
+                    <p class="memorial-list-preview">
+                        {{ m.texto_principal[:200] + '...' if m.texto_principal and m.texto_principal|length > 200 else m.texto_principal or 'Sem texto' }}
+                    </p>
+                    <div class="memorial-list-meta">
+                        <span>📅 {{ m.criado_em[:10] if m.criado_em else 'N/A' }}</span>
+                        {% if m.url_lattes %}
+                        <span>🔗 Lattes</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </a>
+            <form action="{{ url_for('remover_memorial', memorial_id=m.id) }}"
+                  method="POST" class="memorial-list-delete"
+                  onsubmit="return confirm('Remover memorial de {{ m.nome }}?')">
+                <button type="submit" class="btn-icon-delete" title="Remover">🗑️</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <h3>Nenhum memorial encontrado</h3>
+        <p>Crie o primeiro memorial a partir de um currículo Lattes.</p>
+        <a href="{{ url_for('index') }}" class="btn-gerar" style="display:inline-flex; margin-top:1.5rem">
+            ← Ir para o Início
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
