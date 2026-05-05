@@ -315,19 +315,39 @@ def _extrair_premios(soup: BeautifulSoup) -> list:
 
 
 def _extrair_idiomas(soup: BeautifulSoup) -> list:
-    """Extrai idiomas."""
-    idiomas = []
+    """Extrai idiomas, removendo duplicatas e fragmentos sub-aninhados."""
+    idiomas_brutos = []
     secao = _encontrar_secao(soup, r"Idiomas")
     if not secao:
-        return idiomas
+        return idiomas_brutos
 
     itens = secao.find_all(["div", "li"])
     for item in itens:
         texto = _limpar_texto(item.get_text())
         if texto and len(texto) > 3:
-            idiomas.append(texto)
+            idiomas_brutos.append(texto)
 
-    return idiomas
+    # Deduplicação: o Lattes tem divs aninhadas que duplicam conteúdo.
+    # Remove (a) duplicatas exatas e (b) strings que são SUBSTRING de outra.
+    return _deduplicar_lista(idiomas_brutos)
+
+
+def _deduplicar_lista(itens: list) -> list:
+    """
+    Remove duplicatas e elementos contidos dentro de outros maiores.
+    Útil para o HTML do Lattes que aninha divs com conteúdo repetido.
+    """
+    if not itens:
+        return []
+
+    # Ordena por tamanho decrescente: queremos manter os mais completos
+    ordenados = sorted(set(itens), key=len, reverse=True)
+    resultado = []
+    for item in ordenados:
+        # Só adiciona se não for substring de algo já adicionado
+        if not any(item != j and item in j for j in resultado):
+            resultado.append(item)
+    return resultado
 
 
 # ── Utilitários ──────────────────────────────────────────

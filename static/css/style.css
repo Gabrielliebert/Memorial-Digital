@@ -1254,24 +1254,84 @@ a:hover { color: var(--accent-secondary); }
 }
 
 /* ═══════════════════════════════════════════════════
-   Footer
+   Footer (com seção DAVI/LAVI/UFMT)
    ═══════════════════════════════════════════════════ */
 .footer {
-    padding: 2.5rem 2rem;
-    text-align: center;
+    padding: 3rem 2rem 1.5rem;
     border-top: 1px solid var(--border-subtle);
     background: var(--bg-secondary);
+}
+
+.footer-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.footer-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2.5rem;
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 768px) {
+    .footer-grid { grid-template-columns: 1fr; gap: 2rem; }
+}
+
+.footer-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.footer-titulo {
+    font-family: var(--font-editorial);
+    font-size: 0.95rem;
+    color: var(--accent-primary);
+    margin-bottom: 0.5rem;
+    font-weight: 600;
 }
 
 .footer-text {
     font-size: 0.85rem;
     color: var(--text-secondary);
-    margin-bottom: 0.25rem;
+    line-height: 1.6;
+    margin: 0;
 }
 
 .footer-sub {
     font-size: 0.78rem;
     color: var(--text-muted);
+    line-height: 1.6;
+    margin: 0.25rem 0 0;
+}
+
+.footer-link {
+    display: inline-block;
+    margin-top: 0.5rem;
+    color: var(--accent-primary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+.footer-link:hover {
+    color: var(--accent-secondary);
+    text-decoration: underline;
+}
+
+.footer-baseline {
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 1.25rem;
+    text-align: center;
+}
+
+.footer-baseline .footer-sub {
+    font-style: italic;
+    line-height: 1.7;
+    max-width: 800px;
+    margin: 0 auto;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -1944,8 +2004,8 @@ a:hover { color: var(--accent-secondary); }
 /* Resumo curto: destaque visual mas SEM ser carregado */
 .memorial-resumo-curto {
     max-width: 720px;
-    margin: -2rem auto 2rem;
-    padding: 2rem 2.5rem;
+    margin: -2rem auto 2.5rem;
+    padding: 2.25rem 2.5rem;
     background: var(--bg-card);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-lg);
@@ -1956,10 +2016,51 @@ a:hover { color: var(--accent-secondary); }
 
 .memorial-resumo-curto p {
     font-family: var(--font-editorial);
-    font-size: 1.15rem;
-    line-height: 1.7;
+    font-size: 1.2rem;
+    line-height: 1.8;
     color: var(--text-primary);
-    margin: 0;
+    margin: 0.75rem 0;
+}
+
+.memorial-resumo-curto p:first-child { margin-top: 0; }
+.memorial-resumo-curto p:last-child { margin-bottom: 0; }
+
+/* Ações públicas (visitante) — minimalistas, abaixo do resumo */
+.acoes-visitante {
+    max-width: 720px;
+    margin: 0 auto 2rem;
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.btn-mini {
+    background: transparent;
+    border: 1px solid var(--border-light);
+    color: var(--text-secondary);
+    padding: 0.45rem 0.95rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: var(--font-ui);
+}
+
+.btn-mini:hover {
+    background: var(--accent-soft);
+    border-color: var(--border-accent);
+    color: var(--accent-primary);
+}
+
+.btn-mini-mod {
+    border-style: dashed;
+    color: var(--text-muted);
+    font-size: 0.78rem;
 }
 
 .memorial-em-memoria .memorial-resumo-curto {
@@ -2060,7 +2161,7 @@ a:hover { color: var(--accent-secondary); }
 .accordions {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 1rem;
 }
 
 .accordion {
@@ -2120,17 +2221,27 @@ a:hover { color: var(--accent-secondary); }
 }
 
 .accordion-body {
-    padding: 0 1.25rem 1.25rem 1.25rem;
+    padding: 1.25rem 1.5rem 1.5rem 1.5rem;
     border-top: 1px solid var(--border-subtle);
-    padding-top: 1rem;
 }
 
 .accordion-body p {
-    margin: 0.5rem 0;
-    line-height: 1.7;
+    margin: 0.85rem 0;
+    line-height: 1.85;
     color: var(--text-secondary);
-    font-size: 0.92rem;
+    font-size: 0.95rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--border-subtle);
 }
+
+.accordion-body p:hover {
+    border-left-color: var(--accent-primary);
+    color: var(--text-primary);
+    transition: all var(--transition-fast);
+}
+
+.accordion-body p:first-child { margin-top: 0; }
+.accordion-body p:last-child { margin-bottom: 0; }
 
 /* Form de tributo colapsável */
 .tributo-form-wrapper {

@@ -81,9 +81,27 @@
         </div>
         {% endif %}
 
-        {# ── Ações do MODERADOR — separado visualmente (Trevisan et al., 2021) ── #}
+        {# ── Ações públicas (visitante) — discretas, abaixo do resumo ── #}
+        <div class="acoes-visitante">
+            <button class="btn-mini" onclick="compartilhar()" title="Compartilhar este memorial">
+                🔗 Compartilhar
+            </button>
+            <button class="btn-mini" onclick="window.print()" title="Imprimir esta página">
+                🖨️ Imprimir
+            </button>
+            {% if not is_moderador %}
+            <a href="?mod=1" class="btn-mini btn-mini-mod" title="Acessar ferramentas de moderação">
+                🛠️ Sou o criador
+            </a>
+            {% endif %}
+        </div>
+
+        {# ── Ações do MODERADOR — apenas com ?mod=1
+             Embasamento: Trevisan et al. (2021) — separar visualização de
+             edição. Visitante não precisa ver Editar/Regenerar/Remover. #}
+        {% if is_moderador %}
         <div class="moderator-bar">
-            <span class="moderator-label">🛠️ Ferramentas do moderador:</span>
+            <span class="moderator-label">🛠️ Modo moderador ativo</span>
             <div class="moderator-actions">
                 <a href="{{ url_for('editar_memorial', memorial_id=memorial.id) }}"
                    class="btn-mod btn-mod-primary" title="Editar memorial">
@@ -92,24 +110,24 @@
                 <form action="{{ url_for('regenerar_memorial', memorial_id=memorial.id) }}"
                       method="POST" class="inline-form"
                       onsubmit="return confirm('Regenerar texto com IA?')">
-                    <button type="submit" class="btn-mod" title="Regenerar texto com IA">🔄</button>
+                    <button type="submit" class="btn-mod" title="Regenerar texto com IA">🔄 Regenerar</button>
                 </form>
                 <a href="{{ url_for('configurar_memorial', memorial_id=memorial.id) }}"
-                   class="btn-mod" title="Configurar privacidade">⚙️</a>
+                   class="btn-mod" title="Configurar privacidade">⚙️ Configurar</a>
                 <a href="{{ url_for('moderar_tributos', memorial_id=memorial.id) }}"
-                   class="btn-mod" title="Moderar mensagens">💬</a>
+                   class="btn-mod" title="Moderar mensagens">💬 Mensagens</a>
                 <a href="{{ url_for('ver_dados', memorial_id=memorial.id) }}"
-                   class="btn-mod" title="Ver dados extraídos">📊</a>
-                <button class="btn-mod" onclick="copiarTexto()" title="Copiar texto">📋</button>
-                <button class="btn-mod" onclick="compartilhar()" title="Compartilhar link">🔗</button>
-                <button class="btn-mod" onclick="window.print()" title="Imprimir">🖨️</button>
+                   class="btn-mod" title="Ver dados extraídos">📊 Dados</a>
                 <form action="{{ url_for('remover_memorial', memorial_id=memorial.id) }}"
                       method="POST" class="inline-form"
                       onsubmit="return confirm('Remover este memorial permanentemente?')">
-                    <button type="submit" class="btn-mod btn-mod-danger" title="Remover memorial">🗑️</button>
+                    <button type="submit" class="btn-mod btn-mod-danger" title="Remover">🗑️ Remover</button>
                 </form>
+                <a href="{{ url_for('ver_memorial', memorial_id=memorial.id) }}"
+                   class="btn-mod" title="Voltar à visualização normal">👁️ Sair do modo mod</a>
             </div>
         </div>
+        {% endif %}
 
         {# ── Seções expansíveis (Maciel et al., 2019: progressive disclosure) ── #}
         {% if memorial.secoes %}
