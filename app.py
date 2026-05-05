@@ -493,10 +493,16 @@ def _pipeline_memorial(task_id: str, fonte: str, origem: str,
 if __name__ == "__main__":
     print("=" * 55)
     print("  Sistema de Memorial Digital")
-    print("  PIBIC 2025/2026 — Monteiro & Maciel (UFMT/LAVI)")
+    print("  PIBIC 2025/2026 — UFMT/LAVI")
     print("=" * 55)
-    print(f"  Modelo: {config.GEMINI_MODEL}")
-    print(f"  Banco:  {config.DATABASE_PATH}")
-    print(f"  API:    {'✓ Configurada' if config.GEMINI_API_KEY and config.GEMINI_API_KEY != 'sua_chave_aqui' else '✗ Não configurada'}")
+    print(f"  Provider: {config.LLM_PROVIDER}")
+    if config.LLM_PROVIDER == "gemini":
+        ok = config.GEMINI_API_KEY and config.GEMINI_API_KEY != "sua_chave_aqui"
+        print(f"  Modelo:   {config.GEMINI_MODEL}")
+        print(f"  API key:  {'✓ Configurada' if ok else '✗ NÃO configurada — pegue em https://aistudio.google.com/apikey'}")
+    else:
+        print(f"  Modelo:   {config.OLLAMA_MODEL}")
+        print(f"  URL:      {config.OLLAMA_BASE_URL}")
+    print(f"  Banco:    {config.DATABASE_PATH}")
     print("=" * 55)
     app.run(debug=config.DEBUG, port=5000)
