@@ -59,9 +59,16 @@ def _limpar_tarefas_antigas():
 
 @app.route("/")
 def index():
-    """Página inicial — formulário de URL do Lattes."""
+    """Landing: escolha entre buscar ou criar memorial."""
     memoriais = listar_memoriais()
-    return render_template("index.html", memoriais=memoriais)
+    return render_template("index.html", memoriais=memoriais,
+                           total_memoriais=len(memoriais))
+
+
+@app.route("/criar")
+def criar():
+    """Página unificada de criação (Lattes ou Manual com tabs)."""
+    return render_template("criar.html")
 
 
 @app.route("/gerar", methods=["POST"])
@@ -90,8 +97,8 @@ def gerar():
 
 @app.route("/manual", methods=["GET"])
 def formulario_manual():
-    """Exibe o formulário para entrada manual de dados."""
-    return render_template("manual.html")
+    """Compat: redireciona para /criar (URL antiga)."""
+    return redirect(url_for("criar"))
 
 
 @app.route("/gerar_manual", methods=["POST"])
@@ -109,7 +116,16 @@ def gerar_manual():
             dados = construir_dados_manuais(request.form)
     except ValueError as e:
         flash(f"Erro nos dados: {e}", "erro")
-        return redirect(url_for("formulario_manual"))
+        return redirect(url_for("criar"))
+
+    # Foto opcional do upload
+    foto_url = None
+    if "foto" in request.files:
+        arquivo = request.files["foto"]
+        if arquivo and arquivo.filename:
+            foto_url = _salvar_foto_upload(arquivo)
+            if foto_url:
+                dados["foto_url"] = foto_url
 
     return _iniciar_pipeline(
         fonte="manual", origem="formulario",
@@ -118,6 +134,28 @@ def gerar_manual():
         data_nascimento=data_nascimento,
         data_falecimento=data_falecimento,
     )
+
+
+def _salvar_foto_upload(arquivo) -> str | None:
+    """Salva uma foto enviada e retorna a URL relativa."""
+    import uuid
+    from werkzeug.utils import secure_filename
+
+    extensoes_ok = {".jpg", ".jpeg", ".png", ".webp", ".gif"}
+    nome_seguro = secure_filename(arquivo.filename or "")
+    if not nome_seguro:
+        return None
+
+    ext = os.path.splitext(nome_seguro)[1].lower()
+    if ext not in extensoes_ok:
+        return None
+
+    pasta = os.path.join(os.path.dirname(__file__), "static", "uploads")
+    os.makedirs(pasta, exist_ok=True)
+    nome_unico = f"{uuid.uuid4().hex[:12]}{ext}"
+    caminho = os.path.join(pasta, nome_unico)
+    arquivo.save(caminho)
+    return url_for("static", filename=f"uploads/{nome_unico}")
 
 
 def _iniciar_pipeline(fonte: str, origem: str, dados_pre_coletados: dict = None,
@@ -278,16 +316,95 @@ def lista_memoriais():
     return render_template("memoriais.html", memoriais=memoriais, query=q)
 
 
-@app.route("/memorial/<int:memorial_id>/editar", methods=["POST"])
+@app.route("/memorial/<int:memorial_id>/editar", methods=["GET", "POST"])
 def editar_memorial(memorial_id):
-    """Atualiza o texto do memorial (edição manual)."""
-    titulo = request.form.get("titulo")
-    texto_principal = request.form.get("texto_principal")
+    """Edição completa: nome, texto, datas, foto, seções."""
+    memorial = buscar_memorial(memorial_id)
+    if not memorial:
+        flash("Memorial não encontrado.", "erro")
+        return redirect(url_for("index"))
 
-    if atualizar_memorial(memorial_id, titulo=titulo, texto_principal=texto_principal):
-        flash("Memorial atualizado com sucesso!", "sucesso")
-    else:
-        flash("Erro ao atualizar o memorial.", "erro")
+    if request.method == "POST":
+        # Coletar campos
+        nome = (request.form.get("nome") or "").strip()
+        titulo = request.form.get("titulo")
+        texto_principal = request.form.get("texto_principal")
+        data_nascimento = request.form.get("data_nascimento") or ""
+        data_falecimento = request.form.get("data_falecimento") or ""
+
+        # Seções dinâmicas
+        secoes = []
+        idx = 0
+        while True:
+            t = request.form.get(f"secao_titulo_{idx}")
+            c = request.form.get(f"secao_conteudo_{idx}")
+            if t is None and c is None:
+                break
+            if t and c:
+                secoes.append({"titulo": t.strip(), "conteudo": c.strip()})
+            idx += 1
+
+        # Foto: upload novo, manter, ou limpar
+        foto_acao = request.form.get("foto_acao", "manter")
+        foto_url = None
+        if foto_acao == "upload" and "foto" in request.files:
+            arquivo = request.files["foto"]
+            if arquivo and arquivo.filename:
+                nova = _salvar_foto_upload(arquivo)
+                if nova:
+                    foto_url = nova
+        elif foto_acao == "url":
+            foto_url = (request.form.get("foto_url_externa") or "").strip() or ""
+        elif foto_acao == "remover":
+            foto_url = ""
+        # Se foto_acao == "manter", não passa o argumento (mantém atual)
+
+        kwargs = {
+            "nome": nome or None,
+            "titulo": titulo,
+            "texto_principal": texto_principal,
+            "secoes": secoes,
+            "data_nascimento": data_nascimento,
+            "data_falecimento": data_falecimento,
+        }
+        if foto_url is not None:
+            kwargs["foto_url"] = foto_url
+
+        if atualizar_memorial(memorial_id, **kwargs):
+            flash("Memorial atualizado com sucesso!", "sucesso")
+        else:
+            flash("Nenhuma alteração foi feita.", "info")
+
+        return redirect(url_for("ver_memorial", memorial_id=memorial_id))
+
+    return render_template("editar.html", memorial=memorial)
+
+
+@app.route("/memorial/<int:memorial_id>/regenerar", methods=["POST"])
+def regenerar_memorial(memorial_id):
+    """Regenera o texto do memorial usando os dados originais armazenados."""
+    memorial = buscar_memorial(memorial_id)
+    if not memorial:
+        flash("Memorial não encontrado.", "erro")
+        return redirect(url_for("index"))
+
+    dados = memorial.get("dados", {})
+    if not dados:
+        flash("Dados originais não disponíveis para regenerar.", "erro")
+        return redirect(url_for("ver_memorial", memorial_id=memorial_id))
+
+    try:
+        resultado = gerar_memorial(dados, status=memorial.get("memorial_status", "ativo"))
+        atualizar_memorial(
+            memorial_id,
+            titulo=resultado.get("titulo"),
+            texto_principal=resultado.get("texto_principal"),
+            secoes=resultado.get("secoes"),
+        )
+        flash("Memorial regenerado com sucesso!", "sucesso")
+    except Exception as e:
+        print(f"[Regenerar] ✗ Erro: {e}")
+        flash(f"Erro ao regenerar: {e}", "erro")
 
     return redirect(url_for("ver_memorial", memorial_id=memorial_id))
 

@@ -15,9 +15,17 @@
             </div>
             {% endif %}
 
+            {% if memorial.foto_url %}
+            <img src="{{ memorial.foto_url }}" alt="{{ memorial.nome }}"
+                 class="memorial-foto-lg" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="memorial-avatar-lg" style="display:none">
+                {{ memorial.nome[0] if memorial.nome else '?' }}
+            </div>
+            {% else %}
             <div class="memorial-avatar-lg">
                 {{ memorial.nome[0] if memorial.nome else '?' }}
             </div>
+            {% endif %}
             <h1 class="memorial-nome">{{ memorial.nome }}</h1>
 
             {% if is_memorializado and (memorial.data_nascimento or memorial.data_falecimento) %}
@@ -92,14 +100,19 @@
 
     <!-- Ações -->
     <div class="memorial-actions">
-        <button class="btn-action btn-edit" onclick="toggleEditar()" id="btnEditar">
+        <a href="{{ url_for('editar_memorial', memorial_id=memorial.id) }}" class="btn-action btn-edit">
             ✏️ Editar
-        </button>
+        </a>
+        <form action="{{ url_for('regenerar_memorial', memorial_id=memorial.id) }}"
+              method="POST" class="inline-form"
+              onsubmit="return confirm('Regenerar texto e seções com IA? Isso vai sobrescrever o atual.')">
+            <button type="submit" class="btn-action btn-share">🔄 Regenerar</button>
+        </form>
         <a href="{{ url_for('configurar_memorial', memorial_id=memorial.id) }}" class="btn-action btn-edit">
             ⚙️ Configurar
         </a>
         <button class="btn-action btn-copy" onclick="copiarTexto()">
-            📋 Copiar Texto
+            📋 Copiar
         </button>
         <button class="btn-action btn-share" onclick="compartilhar()">
             🔗 Compartilhar
@@ -108,7 +121,7 @@
             🖨️ Imprimir
         </button>
         <a href="{{ url_for('ver_dados', memorial_id=memorial.id) }}" class="btn-action btn-dados">
-            📊 Dados Extraídos
+            📊 Dados
         </a>
         <form action="{{ url_for('remover_memorial', memorial_id=memorial.id) }}"
               method="POST" class="inline-form"
@@ -179,44 +192,11 @@
     <!-- Toast de feedback -->
     <div class="copy-toast" id="copyToast"></div>
 
-    <!-- Formulário de edição (oculto por padrão) -->
-    <div class="edit-section" id="editSection" style="display:none">
-        <form action="{{ url_for('editar_memorial', memorial_id=memorial.id) }}" method="POST">
-            <h3 class="edit-title">Editar Memorial</h3>
-            <div class="form-group">
-                <label for="editTitulo" class="form-label">Título</label>
-                <input type="text" name="titulo" id="editTitulo"
-                       value="{{ memorial.titulo }}" class="form-input">
-            </div>
-            <div class="form-group">
-                <label for="editTexto" class="form-label">Texto Principal</label>
-                <textarea name="texto_principal" id="editTexto"
-                          class="form-textarea" rows="12">{{ memorial.texto_principal }}</textarea>
-            </div>
-            <div class="edit-actions">
-                <button type="submit" class="btn-gerar">💾 Salvar Alterações</button>
-                <button type="button" class="btn-secondary" onclick="toggleEditar()">Cancelar</button>
-            </div>
-        </form>
-    </div>
 </article>
 {% endblock %}
 
 {% block scripts %}
 <script>
-function toggleEditar() {
-    const section = document.getElementById('editSection');
-    const btn = document.getElementById('btnEditar');
-    if (section.style.display === 'none') {
-        section.style.display = 'block';
-        section.scrollIntoView({ behavior: 'smooth' });
-        btn.textContent = '✕ Fechar';
-    } else {
-        section.style.display = 'none';
-        btn.textContent = '✏️ Editar';
-    }
-}
-
 function mostrarToast(msg) {
     const toast = document.getElementById('copyToast');
     toast.textContent = msg;

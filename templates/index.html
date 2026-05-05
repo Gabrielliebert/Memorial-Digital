@@ -8,133 +8,37 @@
             <span class="hero-accent">Memorial</span> Digital
         </h1>
         <p class="hero-subtitle">
-            Transforme trajetórias acadêmicas em memoriais dignos e respeitosos,
-            gerados automaticamente com Inteligência Artificial.
+            Um espaço respeitoso para preservar trajetórias acadêmicas e
+            profissionais, alinhado às recomendações de design para memoriais
+            digitais (Maciel et al., 2019; Ueda et al., 2022).
         </p>
 
-        <!-- Formulário principal -->
-        <form action="{{ url_for('gerar') }}" method="POST" class="form-gerar" id="formGerar">
-            <div class="input-group">
-                <div class="input-wrapper">
-                    <span class="input-icon">🔗</span>
-                    <input
-                        type="url"
-                        name="url_lattes"
-                        id="urlLattes"
-                        placeholder="Cole a URL do Currículo Lattes aqui..."
-                        class="input-url"
-                        required
-                        autocomplete="url"
-                    >
-                </div>
-                <button type="submit" class="btn-gerar" id="btnGerar">
-                    <span class="btn-text">Gerar Memorial</span>
-                    <span class="btn-icon">→</span>
-                </button>
-            </div>
-            <p class="input-hint">
-                Ex: http://lattes.cnpq.br/0000000000000000
-            </p>
-
-            <!-- Escolha de status — visível na primeira interação -->
-            <div class="status-chooser">
-                <label class="status-option">
-                    <input type="radio" name="memorial_status" value="ativo" checked>
-                    <div>
-                        <span class="status-icon">🟢</span>
-                        <strong>Perfil ativo</strong>
-                        <span class="status-desc">Pessoa em atividade — tom presente</span>
-                    </div>
-                </label>
-                <label class="status-option">
-                    <input type="radio" name="memorial_status" value="memorializado" id="statusMemorializado">
-                    <div>
-                        <span class="status-icon">🕯️</span>
-                        <strong>Em memória</strong>
-                        <span class="status-desc">Pessoa falecida — tom de tributo</span>
-                    </div>
-                </label>
-            </div>
-
-            <!-- Datas (mostra só se memorializado) -->
-            <div class="datas-section" id="datasSection" style="display:none">
-                <div class="datas-row">
-                    <div class="form-group">
-                        <label class="form-label">Nascimento</label>
-                        <input type="date" name="data_nascimento" class="form-input">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Falecimento</label>
-                        <input type="date" name="data_falecimento" class="form-input">
-                    </div>
-                </div>
-            </div>
-        </form>
-
-        <!-- Fontes alternativas -->
-        <div class="fontes-grid">
-            <a href="{{ url_for('formulario_manual') }}" class="fonte-card">
-                <div class="fonte-card-icon">✍️</div>
-                <div class="fonte-card-title">Entrada Manual</div>
-                <div class="fonte-card-desc">
-                    Sem Lattes? Preencha um formulário ou cole um JSON com os dados.
-                    Mais alinhado ao princípio de volição.
-                </div>
+        <!-- Escolha principal: Buscar ou Criar -->
+        <div class="acoes-principais">
+            <a href="{{ url_for('lista_memoriais') }}" class="acao-card">
+                <div class="acao-icon">🔍</div>
+                <h2 class="acao-titulo">Buscar Memorial</h2>
+                <p class="acao-desc">
+                    Veja memoriais já criados ou pesquise por nome
+                    {% if total_memoriais %}
+                    <br><span class="acao-meta">{{ total_memoriais }} memorial(is) disponível(is)</span>
+                    {% endif %}
+                </p>
+                <span class="acao-cta">Explorar →</span>
             </a>
-            <div class="fonte-card" style="opacity:0.55;cursor:not-allowed">
-                <div class="fonte-card-icon">🌐</div>
-                <div class="fonte-card-title">Outras Fontes</div>
-                <div class="fonte-card-desc">
-                    LinkedIn / Escavador / ORCID — em breve. Por enquanto,
-                    use o JSON manual.
-                </div>
-            </div>
+
+            <a href="{{ url_for('criar') }}" class="acao-card acao-card-primario">
+                <div class="acao-icon">✨</div>
+                <h2 class="acao-titulo">Criar Memorial</h2>
+                <p class="acao-desc">
+                    Gere um novo memorial a partir de Lattes ou
+                    de informações inseridas manualmente
+                </p>
+                <span class="acao-cta">Começar →</span>
+            </a>
         </div>
     </div>
 </div>
-
-<!-- Como funciona -->
-<section class="how-section">
-    <h2 class="section-title">Como Funciona</h2>
-    <div class="steps-grid">
-        <div class="step-card">
-            <div class="step-number">01</div>
-            <div class="step-icon">🌐</div>
-            <h3 class="step-title">Coleta</h3>
-            <p class="step-desc">
-                O sistema acessa o Currículo Lattes via navegador.
-                Você resolve o CAPTCHA manualmente na janela que abre.
-            </p>
-        </div>
-        <div class="step-card">
-            <div class="step-number">02</div>
-            <div class="step-icon">🧹</div>
-            <h3 class="step-title">Extração</h3>
-            <p class="step-desc">
-                Os dados são extraídos e organizados em categorias:
-                formação, atuação, produções, projetos e mais.
-            </p>
-        </div>
-        <div class="step-card">
-            <div class="step-number">03</div>
-            <div class="step-icon">🧠</div>
-            <h3 class="step-title">Geração com IA</h3>
-            <p class="step-desc">
-                A Inteligência Artificial cria um texto narrativo em primeira
-                pessoa, utilizando exclusivamente os dados extraídos.
-            </p>
-        </div>
-        <div class="step-card">
-            <div class="step-number">04</div>
-            <div class="step-icon">📄</div>
-            <h3 class="step-title">Memorial</h3>
-            <p class="step-desc">
-                O memorial é apresentado de forma elegante,
-                podendo ser editado e salvo permanentemente.
-            </p>
-        </div>
-    </div>
-</section>
 
 <!-- Memoriais recentes -->
 {% if memoriais %}
@@ -144,9 +48,15 @@
         {% for m in memoriais[:6] %}
         <a href="{{ url_for('ver_memorial', memorial_id=m.id) }}" class="memorial-card">
             <div class="memorial-card-header">
+                {% if m.foto_url %}
+                <img src="{{ m.foto_url }}" alt="{{ m.nome }}" class="memorial-card-foto">
+                {% else %}
                 <span class="memorial-avatar">{{ m.nome[0] if m.nome else '?' }}</span>
+                {% endif %}
                 <div>
-                    <h3 class="memorial-card-name">{{ m.nome }}</h3>
+                    <h3 class="memorial-card-name">
+                        {% if m.memorial_status == 'memorializado' %}🕯️ {% endif %}{{ m.nome }}
+                    </h3>
                     <p class="memorial-card-date">{{ m.criado_em[:10] if m.criado_em else '' }}</p>
                 </div>
             </div>
@@ -165,18 +75,4 @@
     {% endif %}
 </section>
 {% endif %}
-{% endblock %}
-
-{% block scripts %}
-<script>
-// Mostra/oculta campo de datas conforme status escolhido
-document.querySelectorAll('input[name="memorial_status"]').forEach(radio => {
-    radio.addEventListener('change', () => {
-        const datas = document.getElementById('datasSection');
-        if (datas) {
-            datas.style.display = radio.value === 'memorializado' && radio.checked ? '' : 'none';
-        }
-    });
-});
-</script>
 {% endblock %}

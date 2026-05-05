@@ -1799,6 +1799,143 @@ a:hover { color: var(--accent-secondary); }
 }
 
 /* ═══════════════════════════════════════════════════
+   Landing page — escolha Buscar / Criar
+   ═══════════════════════════════════════════════════ */
+.acoes-principais {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    max-width: 720px;
+    margin: 2.5rem auto 0;
+}
+
+@media (max-width: 640px) {
+    .acoes-principais { grid-template-columns: 1fr; }
+}
+
+.acao-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    color: var(--text-primary);
+    transition: all var(--transition-normal);
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.acao-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 0%, var(--accent-soft) 100%);
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+    pointer-events: none;
+}
+
+.acao-card:hover::before { opacity: 1; }
+.acao-card:hover {
+    border-color: var(--border-accent);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+}
+
+.acao-card-primario {
+    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-elevated) 100%);
+    border-color: var(--border-accent);
+}
+
+.acao-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.acao-titulo {
+    font-family: var(--font-editorial);
+    font-size: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.acao-desc {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+    flex: 1;
+}
+
+.acao-meta {
+    color: var(--accent-primary);
+    font-size: 0.82rem;
+    font-weight: 500;
+}
+
+.acao-cta {
+    display: inline-block;
+    padding: 0.6rem 1.5rem;
+    background: var(--accent-primary);
+    color: white;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════════
+   Foto do memorial (header e cards)
+   ═══════════════════════════════════════════════════ */
+.memorial-foto-lg {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--accent-primary);
+    box-shadow: var(--shadow-glow);
+    margin-bottom: 1rem;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.memorial-em-memoria .memorial-foto-lg {
+    border-color: rgba(251, 191, 36, 0.5);
+    filter: saturate(0.85);
+}
+
+.memorial-card-foto {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════
+   Edição: seções dinâmicas
+   ═══════════════════════════════════════════════════ */
+.secao-edit {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.secao-edit .btn-action {
+    align-self: flex-end;
+    font-size: 0.78rem;
+    padding: 0.35rem 0.75rem;
+}
+
+/* ═══════════════════════════════════════════════════
    Print styles
    ═══════════════════════════════════════════════════ */
 @media print {

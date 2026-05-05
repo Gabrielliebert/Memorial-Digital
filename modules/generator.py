@@ -17,77 +17,275 @@ RETRY_BASE_DELAY = 5  # segundos
 
 def gerar_memorial(dados: dict, status: str = "ativo") -> dict:
     """
-    Gera o texto do memorial digital a partir dos dados estruturados.
+    Gera o texto do memorial. Estratégia em camadas:
+
+    1. Se o Lattes já tem um resumo bom (>200 chars), usa ele direto.
+       Só pede para a IA AJUSTAR o tempo verbal conforme o status.
+       Isso é muito mais confiável que pedir para a IA inventar.
+    2. Se a IA falhar, retorna o resumo original (texto útil garantido).
+    3. Se não houver resumo, monta um texto simples a partir dos dados
+       estruturados (formação principal + atuação atual).
 
     Args:
         dados: Dicionário canônico com dados do titular.
-        status: "ativo" (pessoa viva, perfil profissional) ou "memorializado"
-                (pessoa falecida, espaço de memória). Afeta tom e tempo verbal.
+        status: "ativo" ou "memorializado".
 
     Returns:
         Dicionário com titulo, texto_principal, secoes, metadata.
     """
+    nome = dados.get("nome", "Pesquisador(a)")
+    resumo_original = (dados.get("resumo") or "").strip()
+
+    # Caminho A: resumo bom existe → ajusta verbo via IA, fallback = resumo direto
+    if len(resumo_original) >= 200:
+        texto_final, metadata = _adaptar_resumo(resumo_original, nome, status)
+    # Caminho B: sem resumo → monta texto curto a partir dos dados estruturados
+    else:
+        texto_final = _montar_texto_estruturado(dados, status)
+        metadata = {
+            "modelo": "deterministico",
+            "metodo": "estruturado_sem_ia",
+            "alertas": [],
+        }
+
+    titulo = (
+        f"Em memória de {nome}" if status == "memorializado"
+        else f"Memorial de {nome}"
+    )
+
+    secoes = _montar_secoes(dados)
+
+    resultado = {
+        "titulo": titulo,
+        "texto_principal": texto_final,
+        "secoes": secoes,
+        "metadata": metadata,
+    }
+    _validar_resultado(resultado, dados, metadata.get("modelo"))
+    return resultado
+
+
+def _adaptar_resumo(resumo: str, nome: str, status: str) -> tuple[str, dict]:
+    """
+    Pede para a IA APENAS ajustar o tempo verbal do resumo conforme status.
+    Tarefa simples e bem definida — muito menos propensa a falha que gerar tudo.
+    Se falhar, retorna o resumo original (que já é útil).
+    """
     if not config.OLLAMA_BASE_URL:
-        raise ValueError(
-            "URL base do Ollama não configurada. "
-            "Defina OLLAMA_BASE_URL no arquivo .env apontando pro Ngrok/Localtunnel."
-        )
+        # Sem IA disponível, retorna o resumo direto
+        return _ajuste_simples_verbo(resumo, status), {
+            "modelo": "sem_ia",
+            "metodo": "resumo_lattes_direto",
+            "alertas": ["IA não configurada — usando resumo do Lattes"],
+        }
 
-    prompt = _construir_prompt(dados, status=status)
-    print(f"[Gerador] Tamanho do prompt: {len(prompt)} caracteres | status={status}")
-
-    texto_bruto = None
-    modelo_usado = config.GEMINI_MODEL
+    prompt = _construir_prompt_adaptacao(resumo, nome, status)
     url = f"{config.OLLAMA_BASE_URL.rstrip('/')}/api/generate"
+    modelo = config.GEMINI_MODEL
 
     for tentativa in range(1, MAX_RETRIES + 1):
         try:
-            print(f"[Gerador] Tentativa {tentativa}/{MAX_RETRIES} via Ollama ({modelo_usado})...")
-
-            # Qwen3 é modelo de raciocínio; desabilita o "thinking" para evitar
-            # vazamento de chain-of-thought no output.
+            print(f"[Gerador] Adaptando resumo (tentativa {tentativa}/{MAX_RETRIES})")
             payload = {
-                "model": modelo_usado,
+                "model": modelo,
                 "prompt": prompt,
                 "stream": False,
-                "think": False,  # Ollama 0.6+ aceita esta flag para Qwen3
+                "think": False,
                 "options": {
-                    "temperature": config.GEMINI_TEMPERATURE,
-                    "num_ctx": 16384,
-                    # Reforço: tokens de stop que cortam vazamentos comuns
-                    "stop": ["</think>", "```\n\n", "\n\nUser:", "\n\nHuman:"],
+                    "temperature": 0.2,  # baixa: queremos fidelidade
+                    "num_ctx": 8192,
+                    "stop": ["</think>", "```", "\n\n\n"],
                 },
             }
-
             headers = {
                 "ngrok-skip-browser-warning": "true",
                 "Content-Type": "application/json",
             }
+            r = requests.post(url, json=payload, headers=headers, timeout=180)
+            r.raise_for_status()
+            texto_bruto = r.json().get("response", "")
+            texto_limpo = _strip_thinking(texto_bruto)
+            texto_limpo = _limpar_markdown(texto_limpo).strip()
 
-            response = requests.post(url, json=payload, headers=headers, timeout=300)
-            response.raise_for_status()
-
-            resultado_api = response.json()
-            texto_bruto = resultado_api.get("response", "")
-
-            print(f"[Gerador] ✓ Resposta recebida ({len(texto_bruto)} caracteres)")
-            break
+            # Validação mínima: precisa ter o nome e tamanho razoável
+            if (nome.split()[0].lower() in texto_limpo.lower()
+                    and len(texto_limpo) >= 100):
+                print(f"[Gerador] ✓ Resumo adaptado com IA ({len(texto_limpo)} chars)")
+                return texto_limpo, {
+                    "modelo": modelo,
+                    "metodo": "adaptacao_ia",
+                    "alertas": [],
+                }
+            else:
+                print(f"[Gerador] ⚠ Adaptação inválida (sem nome ou curta), retry...")
 
         except Exception as e:
-            print(f"[Gerador] ⚠ Erro ao conectar com Ollama remoto: {e}")
+            print(f"[Gerador] ⚠ Erro na adaptação: {e}")
             if tentativa < MAX_RETRIES:
-                delay = RETRY_BASE_DELAY * tentativa
-                print(f"[Gerador] Aguardando {delay}s antes de tentar novamente...")
-                time.sleep(delay)
+                time.sleep(RETRY_BASE_DELAY * tentativa)
+
+    # Todas as tentativas falharam: usa resumo original com ajuste mecânico de verbo
+    print("[Gerador] ✗ IA falhou — usando resumo original com ajuste mecânico")
+    return _ajuste_simples_verbo(resumo, status), {
+        "modelo": "fallback_deterministico",
+        "metodo": "resumo_lattes_com_ajuste_verbo",
+        "alertas": ["IA falhou — usando resumo do Lattes diretamente"],
+    }
+
+
+def _ajuste_simples_verbo(resumo: str, status: str) -> str:
+    """
+    Ajuste mecânico mínimo: se memorializado, troca alguns verbos no presente
+    por passado. Não é perfeito mas evita "É professor titular" para alguém
+    falecido. Para "ativo", retorna o resumo intacto.
+    """
+    if status != "memorializado":
+        return resumo
+
+    # Substituições básicas (palavra inteira, case-insensitive na primeira letra)
+    substituicoes = [
+        (r"\bAtualmente, é\b", "Foi"),
+        (r"\bAtualmente é\b", "Foi"),
+        (r"\bÉ Professor\b", "Foi Professor"),
+        (r"\bÉ professor\b", "Foi professor"),
+        (r"\bÉ Bolsista\b", "Foi Bolsista"),
+        (r"\bÉ bolsista\b", "Foi bolsista"),
+        (r"\bÉ vice-presidente\b", "Foi vice-presidente"),
+        (r"\bÉ coordenador\b", "Foi coordenador"),
+        (r"\bÉ coordenadora\b", "Foi coordenadora"),
+        (r"\bÉ pesquisador\b", "Foi pesquisador"),
+        (r"\bÉ pesquisadora\b", "Foi pesquisadora"),
+        (r"\bé Professor\b", "foi Professor"),
+        (r"\bé professor\b", "foi professor"),
+        (r"\bé pesquisador\b", "foi pesquisador"),
+        (r"\bé do Conselho\b", "foi do Conselho"),
+        (r"\bSeus interesses são\b", "Seus interesses eram"),
+    ]
+    texto = resumo
+    for padrao, troca in substituicoes:
+        texto = re.sub(padrao, troca, texto)
+    return texto
+
+
+def _construir_prompt_adaptacao(resumo: str, nome: str, status: str) -> str:
+    """Prompt focado APENAS em ajustar o tempo verbal — tarefa simples."""
+    if status == "memorializado":
+        instrucao = (
+            "REESCREVA o texto abaixo no PASSADO (era, foi, atuou, dedicou-se), "
+            "como tributo a alguém que faleceu. Mantenha TODOS os fatos exatamente "
+            "iguais. Apenas mude os tempos verbais e o tom. Use 'foi' ao invés de "
+            "'é', 'atuou' ao invés de 'atua', etc."
+        )
+    else:
+        instrucao = (
+            "REESCREVA o texto abaixo de forma fluida e respeitosa, mantendo "
+            "TODOS os fatos exatamente iguais. Use o tempo presente para a "
+            "atuação atual. Não invente nada que não esteja no texto."
+        )
+
+    return f"""/no_think
+
+{instrucao}
+
+REGRAS:
+- Português do Brasil. Nunca inglês.
+- Sem markdown (nada de **, *, #, -, listas).
+- Apenas texto corrido em parágrafos.
+- Não adicione fatos novos. Não remova fatos existentes.
+- Responda APENAS o texto reescrito. Nada mais.
+
+TEXTO ORIGINAL sobre {nome}:
+\"\"\"
+{resumo}
+\"\"\"
+
+Texto reescrito (apenas o texto, sem comentários):"""
+
+
+def _montar_texto_estruturado(dados: dict, status: str) -> str:
+    """
+    Sem resumo? Monta um texto curto e útil a partir dos dados estruturados.
+    Sempre funciona, sem depender de IA.
+    """
+    nome = dados.get("nome", "Pesquisador(a)")
+    verbo = "foi" if status == "memorializado" else "é"
+
+    partes = [f"{nome} {verbo} pesquisador(a) e profissional acadêmico(a)."]
+
+    # Formação principal (a primeira é geralmente a mais alta)
+    formacao = dados.get("formacao", [])
+    if formacao:
+        primeira = formacao[0]
+        descr = primeira.get("descricao") if isinstance(primeira, dict) else str(primeira)
+        if descr:
+            verbo_form = "Possuía" if status == "memorializado" else "Possui"
+            partes.append(f"{verbo_form} formação: {descr}.")
+
+    # Atuação atual ou principal
+    atuacao = dados.get("atuacao_profissional", [])
+    if atuacao:
+        primeira = atuacao[0]
+        descr = primeira.get("descricao") if isinstance(primeira, dict) else str(primeira)
+        if descr:
+            verbo_at = "Atuou" if status == "memorializado" else "Atua"
+            partes.append(f"{verbo_at} profissionalmente: {descr}.")
+
+    # Áreas de atuação
+    areas = dados.get("areas_atuacao", [])
+    if areas:
+        nomes_areas = []
+        for a in areas[:5]:
+            n = a.get("descricao") if isinstance(a, dict) else str(a)
+            if n:
+                nomes_areas.append(n)
+        if nomes_areas:
+            verbo_a = "Suas áreas de atuação eram" if status == "memorializado" else "Suas áreas de atuação são"
+            partes.append(f"{verbo_a}: {', '.join(nomes_areas)}.")
+
+    return " ".join(partes)
+
+
+def _montar_secoes(dados: dict) -> list[dict]:
+    """
+    Monta seções estruturadas a partir dos dados. Não depende da IA —
+    apresenta os dados de forma organizada e legível.
+    """
+    secoes = []
+
+    def _formatar_lista(itens: list, limite: int = 10) -> str:
+        linhas = []
+        for item in itens[:limite]:
+            if isinstance(item, dict):
+                texto = item.get("descricao", "").strip()
             else:
-                raise RuntimeError(f"Falha ao gerar memorial: {e}")
+                texto = str(item).strip()
+            if texto:
+                linhas.append(texto)
+        return "\n".join(linhas)
 
-    if not texto_bruto:
-        raise RuntimeError("Não foi possível gerar texto. Resposta vazia recebida.")
+    mapeamento = [
+        ("formacao", "Formação Acadêmica", 10),
+        ("atuacao_profissional", "Atuação Profissional", 10),
+        ("areas_atuacao", "Áreas de Atuação", 15),
+        ("projetos", "Projetos", 10),
+        ("orientacoes", "Orientações", 10),
+        ("producoes_bibliograficas", "Produções Bibliográficas", 15),
+        ("premios", "Prêmios e Títulos", 10),
+        ("idiomas", "Idiomas", 10),
+    ]
 
-    resultado = _processar_resposta(texto_bruto, dados, status=status)
-    _validar_resultado(resultado, dados, modelo_usado)
-    return resultado
+    for chave, titulo, limite in mapeamento:
+        valor = dados.get(chave)
+        if not valor:
+            continue
+        if isinstance(valor, list) and valor:
+            conteudo = _formatar_lista(valor, limite)
+            if conteudo:
+                secoes.append({"titulo": titulo, "conteudo": conteudo})
+        elif isinstance(valor, str) and valor.strip():
+            secoes.append({"titulo": titulo, "conteudo": valor.strip()})
+
+    return secoes
 
 
 def _construir_prompt(dados: dict, status: str = "ativo") -> str:

@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Editar — {{ memorial.nome }}{% endblock %}
+
+{% block content %}
+<div class="page-container" style="max-width:850px">
+    <div class="page-header">
+        <a href="{{ url_for('ver_memorial', memorial_id=memorial.id) }}" class="back-link">
+            ← Voltar ao memorial
+        </a>
+        <h1 class="page-title">Editar memorial</h1>
+        <p class="page-subtitle">
+            Edite todos os campos do memorial de <strong>{{ memorial.nome }}</strong>.
+            Use Regenerar para deixar a IA reescrever o texto.
+        </p>
+    </div>
+
+    <form action="{{ url_for('editar_memorial', memorial_id=memorial.id) }}"
+          method="POST" enctype="multipart/form-data" class="manual-form">
+
+        <!-- Nome e título ─────────────────────── -->
+        <div class="config-section">
+            <h2 class="config-section-title">📝 Identificação</h2>
+            <div class="form-group">
+                <label class="form-label">Nome</label>
+                <input type="text" name="nome" class="form-input"
+                       value="{{ memorial.nome }}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Título do memorial</label>
+                <input type="text" name="titulo" class="form-input"
+                       value="{{ memorial.titulo or '' }}">
+            </div>
+        </div>
+
+        <!-- Foto ────────────────────────────── -->
+        <div class="config-section">
+            <h2 class="config-section-title">📷 Foto</h2>
+
+            {% if memorial.foto_url %}
+            <div style="text-align:center;margin-bottom:1rem">
+                <img src="{{ memorial.foto_url }}" alt="Foto atual"
+                     style="max-width:160px;border-radius:50%;border:2px solid var(--border-accent)">
+                <p class="form-hint" style="margin-top:0.5rem">Foto atual</p>
+            </div>
+            {% endif %}
+
+            <div class="radio-group" style="grid-template-columns:1fr 1fr 1fr">
+                <label class="radio-card">
+                    <input type="radio" name="foto_acao" value="manter" checked>
+                    <div><strong>Manter atual</strong>
+                    <span>Não alterar a foto</span></div>
+                </label>
+                <label class="radio-card">
+                    <input type="radio" name="foto_acao" value="upload">
+                    <div><strong>Enviar nova</strong>
+                    <span>Upload do computador</span></div>
+                </label>
+                <label class="radio-card">
+                    <input type="radio" name="foto_acao" value="remover">
+                    <div><strong>Remover</strong>
+                    <span>Voltar ao avatar com inicial</span></div>
+                </label>
+            </div>
+
+            <div id="campoUpload" style="display:none;margin-top:1rem">
+                <input type="file" name="foto" accept="image/*" class="form-input">
+            </div>
+        </div>
+
+        <!-- Datas ─────────────────────────── -->
+        <div class="config-section">
+            <h2 class="config-section-title">📅 Datas</h2>
+            <div class="datas-row">
+                <div class="form-group">
+                    <label class="form-label">Nascimento</label>
+                    <input type="date" name="data_nascimento" class="form-input"
+                           value="{{ memorial.data_nascimento or '' }}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Falecimento</label>
+                    <input type="date" name="data_falecimento" class="form-input"
+                           value="{{ memorial.data_falecimento or '' }}">
+                </div>
+            </div>
+        </div>
+
+        <!-- Texto principal ───────────────── -->
+        <div class="config-section">
+            <h2 class="config-section-title">📖 Texto principal</h2>
+            <div class="form-group">
+                <textarea name="texto_principal" class="form-textarea" rows="12">{{ memorial.texto_principal }}</textarea>
+                <p class="form-hint">
+                    Este é o "coração" do memorial. Pode usar quantos parágrafos quiser.
+                </p>
+            </div>
+        </div>
+
+        <!-- Seções ────────────────────────── -->
+        <div class="config-section">
+            <h2 class="config-section-title">📚 Seções</h2>
+            <p class="config-section-desc">
+                Cada seção aparece como bloco separado no memorial.
+                Deixe vazio para remover.
+            </p>
+
+            <div id="secoesContainer">
+                {% for s in memorial.secoes or [] %}
+                <div class="secao-edit">
+                    <input type="text" name="secao_titulo_{{ loop.index0 }}"
+                           class="form-input" placeholder="Título da seção"
+                           value="{{ s.titulo }}">
+                    <textarea name="secao_conteudo_{{ loop.index0 }}"
+                              class="form-textarea" rows="4"
+                              placeholder="Conteúdo">{{ s.conteudo }}</textarea>
+                    <button type="button" class="btn-action btn-delete"
+                            onclick="this.parentElement.remove()">🗑️ Remover</button>
+                </div>
+                {% endfor %}
+            </div>
+
+            <button type="button" class="btn-action btn-edit" onclick="adicionarSecao()">
+                ➕ Adicionar seção
+            </button>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-gerar">💾 Salvar tudo</button>
+            <a href="{{ url_for('ver_memorial', memorial_id=memorial.id) }}"
+               class="btn-action btn-edit">Cancelar</a>
+        </div>
+    </form>
+
+    <!-- Regenerar (em outro form para não confundir) -->
+    <div class="config-section" style="margin-top:2rem;border-color:var(--color-warning)">
+        <h2 class="config-section-title">🔄 Regenerar com IA</h2>
+        <p class="config-section-desc">
+            Pede para a IA reescrever o texto principal e as seções a partir
+            dos dados originais. <strong>Vai sobrescrever</strong> o texto atual.
+        </p>
+        <form action="{{ url_for('regenerar_memorial', memorial_id=memorial.id) }}"
+              method="POST" onsubmit="return confirm('Sobrescrever o texto atual com nova geração?')">
+            <button type="submit" class="btn-action btn-share">🔄 Regenerar texto</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let proximoIdx = {{ (memorial.secoes or [])|length }};
+
+function adicionarSecao() {
+    const c = document.getElementById('secoesContainer');
+    const div = document.createElement('div');
+    div.className = 'secao-edit';
+    div.innerHTML = `
+        <input type="text" name="secao_titulo_${proximoIdx}"
+               class="form-input" placeholder="Título da seção">
+        <textarea name="secao_conteudo_${proximoIdx}"
+                  class="form-textarea" rows="4"
+                  placeholder="Conteúdo"></textarea>
+        <button type="button" class="btn-action btn-delete"
+                onclick="this.parentElement.remove()">🗑️ Remover</button>
+    `;
+    c.appendChild(div);
+    proximoIdx++;
+}
+
+// Mostra campo de upload só quando "upload" está selecionado
+document.querySelectorAll('input[name="foto_acao"]').forEach(r => {
+    r.addEventListener('change', () => {
+        document.getElementById('campoUpload').style.display =
+            r.value === 'upload' && r.checked ? '' : 'none';
+    });
+});
+</script>
+{% endblock %}
