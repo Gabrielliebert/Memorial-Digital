@@ -1663,6 +1663,142 @@ a:hover { color: var(--accent-secondary); }
 }
 
 /* ═══════════════════════════════════════════════════
+   Status chooser (alive vs memorialized) na criação
+   ═══════════════════════════════════════════════════ */
+.status-chooser {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin: 1.25rem 0 1rem;
+}
+
+@media (max-width: 640px) { .status-chooser { grid-template-columns: 1fr; } }
+
+.status-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.85rem 1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.status-option:hover { border-color: var(--border-accent); }
+.status-option:has(input:checked) {
+    border-color: var(--accent-primary);
+    background: var(--accent-soft);
+}
+
+.status-option div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    flex: 1;
+}
+
+.status-option strong { font-size: 0.92rem; }
+.status-option .status-icon { font-size: 1.1rem; }
+.status-option .status-desc {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
+.datas-section {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.datas-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+@media (max-width: 640px) { .datas-row { grid-template-columns: 1fr; } }
+
+/* ═══════════════════════════════════════════════════
+   Memorial "Em memória" — visual sóbrio
+   ═══════════════════════════════════════════════════ */
+.memorial-em-memoria .memorial-header {
+    background: linear-gradient(180deg, #1f1d2b 0%, #15131c 100%);
+}
+
+.memorial-em-memoria .memorial-header-bg {
+    opacity: 0.4;
+}
+
+.memorial-em-memoria .memorial-avatar-lg {
+    background: linear-gradient(135deg, #6b6980, #4a4858);
+    box-shadow: 0 0 40px rgba(255, 240, 200, 0.08);
+}
+
+.em-memoria-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.95rem;
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.25);
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #fbbf24;
+    margin-bottom: 1.25rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.vela {
+    animation: candleFlicker 2.5s ease-in-out infinite;
+    display: inline-block;
+}
+
+@keyframes candleFlicker {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.85; transform: scale(1.08); }
+}
+
+.memorial-datas {
+    font-family: var(--font-editorial);
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    margin: 0.25rem 0 0.75rem;
+    letter-spacing: 1px;
+}
+
+.datas-separator {
+    margin: 0 0.5rem;
+    color: var(--text-muted);
+}
+
+.meta-privado {
+    color: var(--color-info);
+    background: rgba(96, 165, 250, 0.08);
+    padding: 0.15rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid rgba(96, 165, 250, 0.2);
+}
+
+.alert-box {
+    margin-top: 1rem;
+    padding: 0.85rem 1.25rem;
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.25);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    color: var(--color-warning);
+    text-align: left;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* ═══════════════════════════════════════════════════
    Print styles
    ═══════════════════════════════════════════════════ */
 @media print {

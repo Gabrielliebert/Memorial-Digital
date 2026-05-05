@@ -26,6 +26,40 @@
 
     <!-- Aba: Formulário ─────────────────────────── -->
     <form action="{{ url_for('gerar_manual') }}" method="POST" class="manual-form" id="formManual">
+
+        <!-- Status do memorial -->
+        <div class="status-chooser">
+            <label class="status-option">
+                <input type="radio" name="memorial_status" value="ativo" checked>
+                <div>
+                    <span class="status-icon">🟢</span>
+                    <strong>Perfil ativo</strong>
+                    <span class="status-desc">Pessoa em atividade</span>
+                </div>
+            </label>
+            <label class="status-option">
+                <input type="radio" name="memorial_status" value="memorializado">
+                <div>
+                    <span class="status-icon">🕯️</span>
+                    <strong>Em memória</strong>
+                    <span class="status-desc">Pessoa falecida</span>
+                </div>
+            </label>
+        </div>
+
+        <div class="datas-section" id="datasSectionManual" style="display:none">
+            <div class="datas-row">
+                <div class="form-group">
+                    <label class="form-label">Nascimento</label>
+                    <input type="date" name="data_nascimento" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Falecimento</label>
+                    <input type="date" name="data_falecimento" class="form-input">
+                </div>
+            </div>
+        </div>
+
         <div class="form-group">
             <label for="nome" class="form-label">Nome completo *</label>
             <input type="text" name="nome" id="nome" class="form-input"
@@ -160,5 +194,15 @@ function trocarTab(qual) {
         btnForm.classList.remove('active');
     }
 }
+
+// Mostra datas se memorializado
+document.querySelectorAll('input[name="memorial_status"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+        const datas = document.getElementById('datasSectionManual');
+        if (datas) {
+            datas.style.display = radio.value === 'memorializado' && radio.checked ? '' : 'none';
+        }
+    });
+});
 </script>
 {% endblock %}

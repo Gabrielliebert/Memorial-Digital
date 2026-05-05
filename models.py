@@ -70,6 +70,9 @@ def init_db():
         ("consentimento", "INTEGER DEFAULT 0"),
         ("fonte", "TEXT DEFAULT 'lattes'"),
         ("permitir_tributos", "INTEGER DEFAULT 1"),
+        ("data_nascimento", "TEXT"),
+        ("data_falecimento", "TEXT"),
+        ("memorializado_em", "TEXT"),
     ]
     cols_existentes = {row["name"] for row in conn.execute("PRAGMA table_info(memoriais)")}
     for nome_col, definicao in colunas_novas:
@@ -82,8 +85,10 @@ def init_db():
     print("[DB] ✓ Banco de dados inicializado.")
 
 
-def salvar_memorial(nome: str, origem: str, dados: dict,
-                    resultado: dict) -> int:
+def salvar_memorial(nome: str, origem: str, dados: dict, resultado: dict,
+                    memorial_status: str = "ativo",
+                    data_nascimento: str = None,
+                    data_falecimento: str = None) -> int:
     """
     Salva um memorial no banco de dados.
 
@@ -92,17 +97,26 @@ def salvar_memorial(nome: str, origem: str, dados: dict,
         origem: URL Lattes ou string identificando a origem (ex: "formulario").
         dados: Dicionário canônico de dados estruturados.
         resultado: Dicionário com título, texto_principal, secoes, metadata.
+        memorial_status: "ativo" (vivo) ou "memorializado" (falecido).
+        data_nascimento: Data ISO (YYYY-MM-DD) — opcional.
+        data_falecimento: Data ISO — só se memorializado.
 
     Returns:
         ID do memorial salvo.
     """
     fonte = dados.get("_fonte", "lattes")
+    memorializado_em = (
+        json.dumps({"timestamp": "now"}) if memorial_status == "memorializado"
+        else None
+    )
     conn = get_db()
     cursor = conn.execute(
         """
         INSERT INTO memoriais (nome, url_lattes, dados_json, titulo,
-                               texto_principal, secoes_json, metadata_json, fonte)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                               texto_principal, secoes_json, metadata_json,
+                               fonte, memorial_status, data_nascimento,
+                               data_falecimento, memorializado_em)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             nome,
@@ -113,18 +127,23 @@ def salvar_memorial(nome: str, origem: str, dados: dict,
             json.dumps(resultado.get("secoes", []), ensure_ascii=False),
             json.dumps(resultado.get("metadata", {}), ensure_ascii=False),
             fonte,
+            memorial_status,
+            data_nascimento,
+            data_falecimento,
+            memorializado_em,
         ),
     )
     memorial_id = cursor.lastrowid
 
     conn.execute(
         "INSERT INTO logs (memorial_id, acao, detalhes) VALUES (?, ?, ?)",
-        (memorial_id, "criado", f"Memorial gerado para {nome} via fonte={fonte}"),
+        (memorial_id, "criado",
+         f"Memorial gerado para {nome} | fonte={fonte} | status={memorial_status}"),
     )
 
     conn.commit()
     conn.close()
-    print(f"[DB] ✓ Memorial salvo com ID {memorial_id}")
+    print(f"[DB] ✓ Memorial salvo com ID {memorial_id} (status={memorial_status})")
     return memorial_id
 
 
@@ -138,6 +157,7 @@ def atualizar_configuracao_memorial(memorial_id: int, **campos) -> bool:
     permitidos = {
         "visibilidade", "memorial_status", "legacy_manager_email",
         "consentimento", "permitir_tributos",
+        "data_nascimento", "data_falecimento",
     }
     updates = []
     params = []

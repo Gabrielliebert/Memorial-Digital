@@ -68,6 +68,9 @@ def index():
 def gerar():
     """Inicia o pipeline de geração via Lattes."""
     url_lattes = request.form.get("url_lattes", "").strip()
+    memorial_status = request.form.get("memorial_status", "ativo")
+    data_nascimento = request.form.get("data_nascimento") or None
+    data_falecimento = request.form.get("data_falecimento") or None
 
     if not url_lattes:
         flash("Por favor, insira a URL do currículo Lattes.", "erro")
@@ -77,7 +80,12 @@ def gerar():
         flash("A URL deve ser de um currículo Lattes (lattes.cnpq.br).", "erro")
         return redirect(url_for("index"))
 
-    return _iniciar_pipeline(fonte="lattes", origem=url_lattes)
+    return _iniciar_pipeline(
+        fonte="lattes", origem=url_lattes,
+        memorial_status=memorial_status,
+        data_nascimento=data_nascimento,
+        data_falecimento=data_falecimento,
+    )
 
 
 @app.route("/manual", methods=["GET"])
@@ -90,6 +98,9 @@ def formulario_manual():
 def gerar_manual():
     """Inicia o pipeline a partir de dados informados manualmente."""
     payload_json = (request.form.get("dados_json") or "").strip()
+    memorial_status = request.form.get("memorial_status", "ativo")
+    data_nascimento = request.form.get("data_nascimento") or None
+    data_falecimento = request.form.get("data_falecimento") or None
 
     try:
         if payload_json:
@@ -100,10 +111,19 @@ def gerar_manual():
         flash(f"Erro nos dados: {e}", "erro")
         return redirect(url_for("formulario_manual"))
 
-    return _iniciar_pipeline(fonte="manual", origem="formulario", dados_pre_coletados=dados)
+    return _iniciar_pipeline(
+        fonte="manual", origem="formulario",
+        dados_pre_coletados=dados,
+        memorial_status=memorial_status,
+        data_nascimento=data_nascimento,
+        data_falecimento=data_falecimento,
+    )
 
 
-def _iniciar_pipeline(fonte: str, origem: str, dados_pre_coletados: dict = None):
+def _iniciar_pipeline(fonte: str, origem: str, dados_pre_coletados: dict = None,
+                      memorial_status: str = "ativo",
+                      data_nascimento: str = None,
+                      data_falecimento: str = None):
     """Cria a tarefa e dispara a thread do pipeline."""
     _limpar_tarefas_antigas()
 
@@ -120,12 +140,14 @@ def _iniciar_pipeline(fonte: str, origem: str, dados_pre_coletados: dict = None)
         "memorial_id": None,
         "erro": None,
         "fonte": fonte,
+        "memorial_status": memorial_status,
         "_timestamp": time.time(),
     }
 
     thread = threading.Thread(
         target=_pipeline_memorial,
-        args=(task_id, fonte, origem, dados_pre_coletados),
+        args=(task_id, fonte, origem, dados_pre_coletados,
+              memorial_status, data_nascimento, data_falecimento),
         daemon=True,
     )
     thread.start()
@@ -293,13 +315,12 @@ def ver_dados(memorial_id):
 # ── Pipeline ─────────────────────────────────────────
 
 def _pipeline_memorial(task_id: str, fonte: str, origem: str,
-                       dados_pre_coletados: dict = None):
-    """
-    Pipeline completo de geração do memorial.
-    Executado em thread separada. Suporta múltiplas fontes.
-    """
+                       dados_pre_coletados: dict = None,
+                       memorial_status: str = "ativo",
+                       data_nascimento: str = None,
+                       data_falecimento: str = None):
+    """Pipeline completo de geração. Executado em thread separada."""
     try:
-        # Etapa 1+2: Coleta e Parsing (ou dados já fornecidos)
         if dados_pre_coletados is not None:
             dados = dados_pre_coletados
         else:
@@ -315,23 +336,24 @@ def _pipeline_memorial(task_id: str, fonte: str, origem: str,
             tarefas[task_id]["mensagem"] = "Extraindo dados do currículo..."
 
         nome = dados.get("nome", "Pesquisador(a)")
-        print(f"[Pipeline] Dados ({fonte}) preparados para: {nome}")
+        print(f"[Pipeline] Dados ({fonte}) preparados para: {nome} | status={memorial_status}")
 
-        # Etapa 3: Geração
         tarefas[task_id]["status"] = "gerando"
         tarefas[task_id]["progresso"] = 70
-        tarefas[task_id]["mensagem"] = (
-            f"Gerando memorial para {nome}..."
-        )
+        tarefas[task_id]["mensagem"] = f"Gerando memorial para {nome}..."
 
-        resultado = gerar_memorial(dados)
+        resultado = gerar_memorial(dados, status=memorial_status)
 
-        # Etapa 4: Salvamento
         tarefas[task_id]["status"] = "salvando"
         tarefas[task_id]["progresso"] = 90
         tarefas[task_id]["mensagem"] = "Salvando memorial no banco de dados..."
 
-        memorial_id = salvar_memorial(nome, origem, dados, resultado)
+        memorial_id = salvar_memorial(
+            nome, origem, dados, resultado,
+            memorial_status=memorial_status,
+            data_nascimento=data_nascimento,
+            data_falecimento=data_falecimento,
+        )
 
         tarefas[task_id]["status"] = "concluido"
         tarefas[task_id]["progresso"] = 100
