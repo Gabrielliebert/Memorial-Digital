@@ -114,8 +114,8 @@ def _chamar_gemini(prompt: str) -> str:
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
-            "temperature": config.LLM_TEMPERATURE,
-            "maxOutputTokens": 200,  # ~150 palavras max — força resumo curto
+            "temperature": 0.2,  # baixa: queremos formato fixo, não criatividade
+            "maxOutputTokens": 80,  # ~25 palavras max — UMA frase
             "responseMimeType": "text/plain",
         },
     }
@@ -196,57 +196,77 @@ def _chamar_ollama(prompt: str) -> str:
 
 def _construir_prompt_resumo(dados: dict, status: str) -> str:
     """
-    Prompt para gerar um RESUMO ENXUTO (2-3 frases, ~40-60 palavras).
+    Prompt para resumo ULTRA enxuto: 1 frase, no máximo 2.
 
-    Embasamento — princípio de "informação essencial primeiro" em memoriais
-    digitais (Lopes, Maciel & Pereira, 2014; Maciel et al., 2019). O texto
-    inicial deve apresentar a identidade essencial. Detalhes vão para seções
-    expansíveis (progressive disclosure — Maciel et al., 2019).
+    Embasamento — Lopes, Maciel & Pereira (2014, "Virtual Homage to the Dead"):
+    a identidade essencial em um memorial digital deve ser breve e direta,
+    funcionando como "porta de entrada" para detalhes em camadas (Maciel et
+    al., 2019 — progressive disclosure). Excesso de informação inicial gera
+    sobrecarga cognitiva e reduz acessibilidade emocional ao memorial.
+
+    Formato esperado: "{Nome} é/foi {profissão genérica}, atua/atuou
+    principalmente na área de {área generalista — ex: Computação, Educação,
+    Engenharia, Saúde}."
     """
     nome = dados.get("nome", "Pesquisador(a)")
+    primeiro_nome = nome.split()[0] if nome else "X"
     dados_texto = _formatar_dados_para_prompt(dados)
 
     if status == "memorializado":
-        instrucao_tom = "Escreva no PASSADO. Tom de tributo respeitoso."
-        verbo_ex = "foi"
-        exemplo = (
-            f"{nome} foi professor universitário e pesquisador, "
-            "com atuação principal em Educação Matemática. "
-            "Deixou contribuições marcantes na formação docente e "
-            "na pesquisa em didática da matemática no Brasil."
-        )
+        verbo_ser = "foi"
+        verbo_atuar = "atuou"
+        exemplo = f"{nome} foi professor e pesquisador, atuou principalmente na área de Computação."
     else:
-        instrucao_tom = "Escreva no PRESENTE para atuação atual."
-        verbo_ex = "é"
-        exemplo = (
-            f"{nome} é professor universitário e pesquisador, "
-            "com atuação principal em Interação Humano-Computador. "
-            "Tem contribuições reconhecidas em legado digital pós-morte "
-            "e memoriais digitais."
-        )
+        verbo_ser = "é"
+        verbo_atuar = "atua"
+        exemplo = f"{nome} é professor e pesquisador, atua principalmente na área de Computação."
 
     prompt = f"""/no_think
 
-Tarefa: escrever um RESUMO MUITO CURTO de {nome}.
+Tarefa: escrever UMA ÚNICA FRASE descrevendo {nome}.
 
-REGRAS CRÍTICAS:
-1. APENAS 2 OU 3 FRASES. Total entre 40 e 70 palavras. NÃO ULTRAPASSE.
-2. EM PORTUGUÊS DO BRASIL. Nunca em inglês.
-3. Estrutura: (a) quem {verbo_ex}; (b) área PRINCIPAL de atuação (escolha apenas 1 ou 2, NÃO liste todas); (c) UMA contribuição/destaque mais relevante.
-4. Use APENAS fatos dos DADOS. Nunca invente.
-5. {instrucao_tom}
-6. NÃO use markdown (sem **, *, #, -, listas).
-7. Comece com o nome.
-8. Texto corrido, sem títulos, sem despedidas, sem "em conclusão".
+FORMATO OBRIGATÓRIO:
+"{nome} {verbo_ser} [profissão], {verbo_atuar} principalmente na área de [ÁREA GENERALISTA]."
 
-EXEMPLO de formato e tamanho esperados:
-"{exemplo}"
+REGRAS RÍGIDAS — viole qualquer uma e a resposta será rejeitada:
 
-DADOS DE {nome.upper()}:
+1. APENAS UMA FRASE. No máximo 25 palavras. Ponto final no fim.
+
+2. ÁREA = palavra única e GENERALISTA. Use APENAS uma destas categorias amplas:
+   - Computação
+   - Engenharia
+   - Educação
+   - Saúde
+   - Ciências Humanas
+   - Ciências Sociais
+   - Ciências Exatas
+   - Ciências Biológicas
+   - Direito
+   - Artes
+   NÃO use sub-áreas (NÃO escreva "Interação Humano-Computador", "Engenharia
+   de Software", "Educação Matemática", "Ciência da Computação"). Generalize
+   sempre para a categoria ampla acima.
+
+3. PROFISSÃO = palavra simples e clara: "professor", "pesquisador",
+   "professor e pesquisador", "médico", "engenheiro", "advogado", etc.
+   NÃO use cargos específicos como "Professor Adjunto IV" ou "Coordenador
+   do Programa X".
+
+4. EM PORTUGUÊS DO BRASIL. Nunca em inglês.
+
+5. SEM MARKDOWN. Sem aspas. Sem negrito. Sem itálico.
+
+6. NÃO acrescente NADA além da frase única. Nada de "em resumo", nada de
+   "destaca-se por", nada de segunda frase.
+
+EXEMPLO da única coisa que você deve responder:
+{exemplo}
+
+DADOS DE {nome.upper()} (use apenas para identificar a área generalista):
 
 {dados_texto}
 
-Responda APENAS com o resumo curto (2-3 frases). Nada mais."""
+Responda APENAS a frase única. Nada mais."""
     return prompt
 
 
@@ -328,20 +348,22 @@ def _sanitizar_texto(texto: str, nome: str) -> str:
 
 
 def _texto_valido(texto: str, nome: str) -> bool:
-    """Valida que o texto gerado é utilizável (resumo curto: 50-500 chars)."""
-    if not texto or len(texto) < 50:
+    """
+    Valida que o texto é UMA frase curta (15-300 chars).
+    Embasamento: identidade essencial em uma sentença
+    (Lopes, Maciel & Pereira, 2014).
+    """
+    if not texto or len(texto) < 15:
         return False
-    if len(texto) > 800:  # se passou muito, IA ignorou a regra de tamanho
-        print(f"[Gerador] ⚠ Texto muito longo ({len(texto)} chars). Truncando...")
-        # Mantém apenas as primeiras 3 frases
-        frases = re.split(r"(?<=[.!?])\s+", texto)
-        return False  # rejeita e força regenerar/fallback
-    # Detectar texto em inglês (heurística)
+    if len(texto) > 300:  # mais que 300 chars = a IA ignorou as regras
+        print(f"[Gerador] ⚠ Texto muito longo ({len(texto)} chars), max 300.")
+        return False
+    # Detectar texto em inglês
     marcadores_en = [" the ", " and ", " his ", " her ", " was ", " were "]
     txt_lower = " " + texto.lower() + " "
-    if sum(1 for m in marcadores_en if m in txt_lower) >= 4:
+    if sum(1 for m in marcadores_en if m in txt_lower) >= 2:
         return False
-    # Pelo menos o primeiro nome deve aparecer
+    # Primeiro nome deve aparecer
     primeiro_nome = nome.split()[0] if nome else ""
     if primeiro_nome and primeiro_nome.lower() not in texto.lower():
         return False
@@ -354,43 +376,72 @@ def _texto_valido(texto: str, nome: str) -> bool:
 
 def _montar_texto_fallback(dados: dict, status: str) -> str:
     """
-    Fallback determinístico: monta resumo CURTO (2-3 frases).
-    Embasamento: princípio de identidade essencial em memoriais
-    digitais (Lopes, Maciel & Pereira, 2014).
+    Fallback determinístico: UMA frase com área generalizada.
+    Embasamento: identidade essencial (Lopes, Maciel & Pereira, 2014).
     """
     nome = dados.get("nome", "Pesquisador(a)")
-    verbo = "foi" if status == "memorializado" else "é"
-
-    # Frase 1: identidade básica + área principal (apenas 1-2 áreas)
-    areas = dados.get("areas_atuacao", [])
-    nomes_areas = []
-    for a in areas[:2]:  # apenas as 2 primeiras
-        n = a.get("descricao") if isinstance(a, dict) else str(a)
-        if n:
-            # Remove códigos como "Grande área:", deixa só o termo principal
-            n_limpo = re.sub(r"^[^:]*:\s*", "", n).strip()
-            if n_limpo:
-                nomes_areas.append(n_limpo)
-
-    if nomes_areas:
-        area_str = " e ".join(nomes_areas)
-        frase1 = f"{nome} {verbo} pesquisador(a), com atuação principal em {area_str}."
+    if status == "memorializado":
+        verbo_ser, verbo_atuar = "foi", "atuou"
     else:
-        frase1 = f"{nome} {verbo} pesquisador(a) e profissional acadêmico(a)."
+        verbo_ser, verbo_atuar = "é", "atua"
 
-    # Frase 2: atuação ou formação principal
-    partes = [frase1]
-    atuacao = dados.get("atuacao_profissional", [])
-    if atuacao:
-        primeira = atuacao[0]
-        descr = primeira.get("descricao") if isinstance(primeira, dict) else str(primeira)
-        # Pega apenas a primeira parte da descrição (instituição e cargo principal)
-        descr_curta = descr.split(",")[0].strip() if descr else ""
-        if descr_curta and len(descr_curta) < 200:
-            v = "Atuou" if status == "memorializado" else "Atua"
-            partes.append(f"{v} profissionalmente em {descr_curta}.")
+    # Tenta inferir a "grande área" a partir das áreas detalhadas
+    area = _inferir_grande_area(dados)
 
-    return " ".join(partes)
+    if area:
+        return f"{nome} {verbo_ser} pesquisador(a), {verbo_atuar} principalmente na área de {area}."
+    return f"{nome} {verbo_ser} pesquisador(a) e profissional acadêmico(a)."
+
+
+# Mapeamento de palavras-chave → grande área (CNPq/CAPES generalizada)
+GRANDES_AREAS = {
+    "Computação": ["computação", "computador", "informática", "software",
+                   "sistemas de informação", "ciência da computação", "ihc",
+                   "interação humano", "inteligência artificial",
+                   "engenharia de software", "redes", "banco de dados"],
+    "Engenharia": ["engenharia", "mecânica", "elétrica", "civil", "produção",
+                   "química", "materiais", "naval", "aeronáutica"],
+    "Educação": ["educação", "pedagogia", "ensino", "didática", "matemática"],
+    "Saúde": ["medicina", "saúde", "enfermagem", "odontologia", "farmácia",
+              "fisioterapia", "psicologia clínica", "nutrição"],
+    "Ciências Humanas": ["filosofia", "história", "antropologia", "sociologia",
+                         "ciência política", "geografia", "teologia"],
+    "Ciências Sociais Aplicadas": ["administração", "economia", "contabilidade",
+                                   "comunicação", "turismo", "serviço social"],
+    "Ciências Exatas": ["matemática", "física", "química", "estatística",
+                        "geociências", "astronomia"],
+    "Ciências Biológicas": ["biologia", "ecologia", "botânica", "zoologia",
+                            "genética", "microbiologia"],
+    "Direito": ["direito", "jurídico"],
+    "Artes": ["artes", "música", "teatro", "dança", "cinema", "design"],
+    "Linguística e Letras": ["linguística", "letras", "literatura"],
+    "Ciências Agrárias": ["agronomia", "zootecnia", "veterinária", "florestal"],
+}
+
+
+def _inferir_grande_area(dados: dict) -> str | None:
+    """Infere a grande área generalizada a partir das áreas detalhadas."""
+    todas_areas_texto = []
+    for chave in ("areas_atuacao", "formacao", "atuacao_profissional"):
+        valores = dados.get(chave) or []
+        for v in valores:
+            t = v.get("descricao") if isinstance(v, dict) else str(v)
+            if t:
+                todas_areas_texto.append(t.lower())
+    blob = " ".join(todas_areas_texto)
+    if not blob:
+        return None
+
+    # Conta hits por grande área
+    pontuacao = {}
+    for area, keywords in GRANDES_AREAS.items():
+        hits = sum(blob.count(kw) for kw in keywords)
+        if hits > 0:
+            pontuacao[area] = hits
+
+    if not pontuacao:
+        return None
+    return max(pontuacao, key=pontuacao.get)
 
 
 # ═══════════════════════════════════════════════════════════════════

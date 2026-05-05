@@ -5,8 +5,22 @@ Utiliza Playwright para abrir o navegador, permitir resolução
 manual de CAPTCHA e extrair o HTML completo do currículo.
 """
 import asyncio
+import sys
 from playwright.async_api import async_playwright
 import config
+
+
+def _avisar_captcha():
+    """Toca um beep e avisa o usuário sobre o CAPTCHA."""
+    if sys.platform == "win32":
+        try:
+            import winsound
+            winsound.MessageBeep(winsound.MB_ICONASTERISK)
+        except Exception:
+            pass
+    print("\n" + "=" * 60)
+    print(" 🔔 RESOLVA O CAPTCHA NA JANELA DO CHROMIUM AGORA")
+    print("=" * 60 + "\n")
 
 
 async def scrape_lattes(url: str) -> str:
@@ -25,7 +39,17 @@ async def scrape_lattes(url: str) -> str:
         Exception: Outros erros de navegação.
     """
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=False)
+        # Argumentos para garantir que a janela apareça em primeiro plano
+        # e o usuário possa resolver o CAPTCHA imediatamente
+        browser = await p.chromium.launch(
+            headless=False,
+            args=[
+                "--start-maximized",
+                "--no-default-browser-check",
+                "--disable-blink-features=AutomationControlled",
+                "--window-position=0,0",
+            ],
+        )
         context = await browser.new_context(
             viewport={"width": 1280, "height": 900},
             user_agent=(
@@ -40,10 +64,25 @@ async def scrape_lattes(url: str) -> str:
         await page.goto(url, wait_until="domcontentloaded",
                         timeout=config.PAGE_LOAD_TIMEOUT * 1000)
 
+        # Forçar a janela do Chromium para frente (resolver CAPTCHA sem
+        # ter que clicar manualmente)
+        try:
+            await page.bring_to_front()
+        except Exception as e:
+            print(f"[Scraper] ⚠ bring_to_front falhou: {e}")
+
+        # Tentativa adicional: usar JavaScript para chamar atenção
+        try:
+            await page.evaluate("""() => {
+                window.focus();
+                document.title = '⚠️ RESOLVA O CAPTCHA — ' + document.title;
+            }""")
+        except Exception:
+            pass
+
         # Aguardar resolução do CAPTCHA — detecta quando o conteúdo
         # do currículo aparece na página (elemento com dados do pesquisador)
-        print("[Scraper] Aguardando resolução do CAPTCHA...")
-        print("[Scraper] → Resolva o CAPTCHA na janela do navegador.")
+        _avisar_captcha()
 
         try:
             # O Lattes mostra o nome do pesquisador em <h2 class="nome">

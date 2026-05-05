@@ -210,15 +210,21 @@ def ver_memorial(memorial_id):
         flash("Memorial não encontrado.", "erro")
         return redirect(url_for("index"))
 
-    # Privacidade: memoriais privados só são acessíveis com chave (futuro: auth real)
+    # Privacidade: memoriais privados só são acessíveis com chave
     if memorial.get("visibilidade") == "privado":
         chave = request.args.get("k", "")
         if chave != f"k{memorial_id * 7919}":  # placeholder simples
             flash("Este memorial é privado.", "erro")
             return redirect(url_for("index"))
 
+    # Modo moderador: ?mod=1 ativa ferramentas de edição/configuração
+    # Embasamento: separação entre visualização e curadoria
+    # (Trevisan et al., 2021; Verhalen et al., 2021).
+    is_moderador = request.args.get("mod") == "1"
+
     tributos = listar_tributos(memorial_id, apenas_aprovados=True)
-    return render_template("memorial.html", memorial=memorial, tributos=tributos)
+    return render_template("memorial.html", memorial=memorial,
+                           tributos=tributos, is_moderador=is_moderador)
 
 
 @app.route("/memorial/<int:memorial_id>/configurar", methods=["GET", "POST"])
