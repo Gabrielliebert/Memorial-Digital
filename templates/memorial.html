@@ -1,3 +1,24 @@
+{#
+  ═══════════════════════════════════════════════════════════════════
+  Memorial — Layout reorganizado conforme princípios de design para
+  memoriais digitais.
+
+  Estrutura inspirada em:
+  - Lopes, Maciel & Pereira (2014) — "Virtual Homage to the Dead":
+    identidade essencial (foto + nome + breve identificação) deve ser
+    o foco inicial.
+  - Maciel et al. (2019) — "Recomendações para o design de memórias
+    digitais na web social": progressive disclosure (revelar info
+    gradualmente, não tudo de uma vez).
+  - Trevisan et al. (2021) — "Perspectives on interaction with dead
+    users' profiles": importância de separar visualização de edição.
+  - Verhalen et al. (2021) — "One Profile, Many Memories" (Participatory
+    Design): usuários querem ver MENOS informação inicial, com opção
+    de aprofundar.
+  - Monteiro et al. (2024) — "Preserving Memories Together": artefatos
+    para memoriais digitais coletivos com curadoria.
+  ═══════════════════════════════════════════════════════════════════
+#}
 {% extends "base.html" %}
 {% block title %}{{ memorial.titulo or 'Memorial' }}{% endblock %}
 
@@ -5,7 +26,8 @@
 {% set is_memorializado = memorial.memorial_status == 'memorializado' %}
 
 <article class="memorial-page {% if is_memorializado %}memorial-em-memoria{% endif %}">
-    <!-- Header do Memorial -->
+
+    {# ── Header: identidade essencial (Lopes, Maciel & Pereira, 2014) ── #}
     <header class="memorial-header">
         <div class="memorial-header-bg"></div>
         <div class="memorial-header-content">
@@ -17,7 +39,8 @@
 
             {% if memorial.foto_url %}
             <img src="{{ memorial.foto_url }}" alt="{{ memorial.nome }}"
-                 class="memorial-foto-lg" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                 class="memorial-foto-lg"
+                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
             <div class="memorial-avatar-lg" style="display:none">
                 {{ memorial.nome[0] if memorial.nome else '?' }}
             </div>
@@ -26,6 +49,7 @@
                 {{ memorial.nome[0] if memorial.nome else '?' }}
             </div>
             {% endif %}
+
             <h1 class="memorial-nome">{{ memorial.nome }}</h1>
 
             {% if is_memorializado and (memorial.data_nascimento or memorial.data_falecimento) %}
@@ -35,42 +59,13 @@
                 {{ memorial.data_falecimento or '?' }}
             </p>
             {% endif %}
-
-            <p class="memorial-titulo">{{ memorial.titulo }}</p>
-
-            <div class="memorial-meta">
-                <span class="meta-item">
-                    📅 Criado em {{ memorial.criado_em[:10] if memorial.criado_em else 'N/A' }}
-                </span>
-                {% if memorial.visibilidade == 'privado' %}
-                <span class="meta-item meta-privado">
-                    🔒 Privado
-                </span>
-                {% endif %}
-                {% if memorial.metadata and memorial.metadata.get('modelo') %}
-                <span class="meta-item">
-                    🧠 {{ memorial.metadata.modelo }}
-                </span>
-                {% endif %}
-                {% if memorial.metadata and memorial.metadata.get('alertas') %}
-                <span class="meta-item meta-warning">
-                    ⚠ {{ memorial.metadata.alertas|length }} alerta(s) de validação
-                </span>
-                {% endif %}
-            </div>
-
-            {% if memorial.metadata and memorial.metadata.get('falha_geracao') %}
-            <div class="alert-box">
-                ⚠ A geração automática do texto falhou. Use o botão Editar para
-                escrever o texto manualmente, ou regenere o memorial.
-            </div>
-            {% endif %}
         </div>
     </header>
 
-    <!-- Texto Principal -->
     <section class="memorial-body">
-        <div class="memorial-text-principal">
+
+        {# ── Resumo curto: 2-3 frases (informação essencial) ── #}
+        <div class="memorial-resumo-curto">
             <div class="quote-mark">"</div>
             {% for paragrafo in memorial.texto_principal.split('\n') %}
                 {% if paragrafo.strip() %}
@@ -79,60 +74,87 @@
             {% endfor %}
         </div>
 
-        <!-- Seções adicionais -->
-        {% if memorial.secoes %}
-        <div class="memorial-secoes">
-            {% for secao in memorial.secoes %}
-            <div class="secao-card">
-                <h2 class="secao-titulo">{{ secao.titulo }}</h2>
-                <div class="secao-conteudo">
-                    {% for paragrafo in secao.conteudo.split('\n') %}
-                        {% if paragrafo.strip() %}
-                        <p>{{ paragrafo }}</p>
-                        {% endif %}
-                    {% endfor %}
-                </div>
+        {% if memorial.metadata and memorial.metadata.get('falha_geracao') %}
+        <div class="alert-box">
+            ⚠ A geração automática do texto falhou. Use o botão Editar para
+            escrever o texto manualmente, ou regenere o memorial.
+        </div>
+        {% endif %}
+
+        {# ── Ações do MODERADOR — separado visualmente (Trevisan et al., 2021) ── #}
+        <div class="moderator-bar">
+            <span class="moderator-label">🛠️ Ferramentas do moderador:</span>
+            <div class="moderator-actions">
+                <a href="{{ url_for('editar_memorial', memorial_id=memorial.id) }}"
+                   class="btn-mod btn-mod-primary" title="Editar memorial">
+                    ✏️ Editar
+                </a>
+                <form action="{{ url_for('regenerar_memorial', memorial_id=memorial.id) }}"
+                      method="POST" class="inline-form"
+                      onsubmit="return confirm('Regenerar texto com IA?')">
+                    <button type="submit" class="btn-mod" title="Regenerar texto com IA">🔄</button>
+                </form>
+                <a href="{{ url_for('configurar_memorial', memorial_id=memorial.id) }}"
+                   class="btn-mod" title="Configurar privacidade">⚙️</a>
+                <a href="{{ url_for('moderar_tributos', memorial_id=memorial.id) }}"
+                   class="btn-mod" title="Moderar mensagens">💬</a>
+                <a href="{{ url_for('ver_dados', memorial_id=memorial.id) }}"
+                   class="btn-mod" title="Ver dados extraídos">📊</a>
+                <button class="btn-mod" onclick="copiarTexto()" title="Copiar texto">📋</button>
+                <button class="btn-mod" onclick="compartilhar()" title="Compartilhar link">🔗</button>
+                <button class="btn-mod" onclick="window.print()" title="Imprimir">🖨️</button>
+                <form action="{{ url_for('remover_memorial', memorial_id=memorial.id) }}"
+                      method="POST" class="inline-form"
+                      onsubmit="return confirm('Remover este memorial permanentemente?')">
+                    <button type="submit" class="btn-mod btn-mod-danger" title="Remover memorial">🗑️</button>
+                </form>
             </div>
-            {% endfor %}
+        </div>
+
+        {# ── Seções expansíveis (Maciel et al., 2019: progressive disclosure) ── #}
+        {% if memorial.secoes %}
+        <div class="memorial-explorar">
+            <h2 class="explorar-titulo">
+                Saiba mais sobre {{ memorial.nome.split()[0] }}
+            </h2>
+            <p class="explorar-subtitulo">
+                Clique nos cartões abaixo para revelar mais sobre a trajetória.
+            </p>
+
+            <div class="accordions">
+                {% set icones = {
+                    'Formação Acadêmica': '🎓',
+                    'Atuação Profissional': '💼',
+                    'Áreas de Atuação': '🔬',
+                    'Projetos': '📋',
+                    'Orientações': '👥',
+                    'Produções Bibliográficas': '📚',
+                    'Prêmios e Títulos': '🏆',
+                    'Idiomas': '🌐'
+                } %}
+
+                {% for secao in memorial.secoes %}
+                <details class="accordion">
+                    <summary class="accordion-header">
+                        <span class="accordion-icon">{{ icones.get(secao.titulo, '📌') }}</span>
+                        <span class="accordion-title">{{ secao.titulo }}</span>
+                        <span class="accordion-arrow">▾</span>
+                    </summary>
+                    <div class="accordion-body">
+                        {% for paragrafo in secao.conteudo.split('\n') %}
+                            {% if paragrafo.strip() %}
+                            <p>{{ paragrafo }}</p>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </details>
+                {% endfor %}
+            </div>
         </div>
         {% endif %}
     </section>
 
-    <!-- Ações -->
-    <div class="memorial-actions">
-        <a href="{{ url_for('editar_memorial', memorial_id=memorial.id) }}" class="btn-action btn-edit">
-            ✏️ Editar
-        </a>
-        <form action="{{ url_for('regenerar_memorial', memorial_id=memorial.id) }}"
-              method="POST" class="inline-form"
-              onsubmit="return confirm('Regenerar texto e seções com IA? Isso vai sobrescrever o atual.')">
-            <button type="submit" class="btn-action btn-share">🔄 Regenerar</button>
-        </form>
-        <a href="{{ url_for('configurar_memorial', memorial_id=memorial.id) }}" class="btn-action btn-edit">
-            ⚙️ Configurar
-        </a>
-        <button class="btn-action btn-copy" onclick="copiarTexto()">
-            📋 Copiar
-        </button>
-        <button class="btn-action btn-share" onclick="compartilhar()">
-            🔗 Compartilhar
-        </button>
-        <button class="btn-action btn-print" onclick="window.print()">
-            🖨️ Imprimir
-        </button>
-        <a href="{{ url_for('ver_dados', memorial_id=memorial.id) }}" class="btn-action btn-dados">
-            📊 Dados
-        </a>
-        <form action="{{ url_for('remover_memorial', memorial_id=memorial.id) }}"
-              method="POST" class="inline-form"
-              onsubmit="return confirm('Tem certeza que deseja remover este memorial?')">
-            <button type="submit" class="btn-action btn-delete">
-                🗑️ Remover
-            </button>
-        </form>
-    </div>
-
-    <!-- Tributos ─────────────────────────────── -->
+    {# ── Tributos: interação coletiva (Monteiro et al., 2024) ── #}
     {% if memorial.permitir_tributos %}
     <section class="tributos-section">
         <h2 class="secao-titulo" style="text-align:center">
@@ -162,30 +184,34 @@
         </p>
         {% endif %}
 
-        <!-- Formulário de tributo -->
-        <form action="{{ url_for('enviar_tributo', memorial_id=memorial.id) }}"
-              method="POST" class="manual-form" style="margin-top:1.5rem">
-            <div class="form-group">
-                <label for="autor" class="form-label">Seu nome</label>
-                <input type="text" name="autor" id="autor" class="form-input"
-                       maxlength="80" required>
-            </div>
-            <div class="form-group">
-                <label for="mensagem" class="form-label">Sua mensagem</label>
-                <textarea name="mensagem" id="mensagem" class="form-textarea"
-                          rows="4" maxlength="1000" required
-                          placeholder="{% if is_memorializado %}Compartilhe uma lembrança ou uma palavra de despedida...{% else %}Deixe uma palavra de reconhecimento ou pergunta...{% endif %}"></textarea>
-            </div>
-            <div class="form-actions">
-                <button type="submit" class="btn-gerar">
-                    {% if is_memorializado %}🕯️ Acender vela{% else %}💌 Enviar mensagem{% endif %}
-                </button>
-            </div>
-            <p class="form-hint">
-                Mensagens passam por moderação antes de serem publicadas,
-                garantindo um espaço respeitoso e seguro.
-            </p>
-        </form>
+        <details class="tributo-form-wrapper">
+            <summary class="btn-gerar tributo-form-toggle">
+                {% if is_memorializado %}🕯️ Deixar uma mensagem{% else %}💌 Deixar uma mensagem{% endif %}
+            </summary>
+            <form action="{{ url_for('enviar_tributo', memorial_id=memorial.id) }}"
+                  method="POST" class="manual-form" style="margin-top:1rem">
+                <div class="form-group">
+                    <label for="autor" class="form-label">Seu nome</label>
+                    <input type="text" name="autor" id="autor" class="form-input"
+                           maxlength="80" required>
+                </div>
+                <div class="form-group">
+                    <label for="mensagem" class="form-label">Sua mensagem</label>
+                    <textarea name="mensagem" id="mensagem" class="form-textarea"
+                              rows="4" maxlength="1000" required
+                              placeholder="{% if is_memorializado %}Compartilhe uma lembrança ou uma palavra de despedida...{% else %}Deixe uma palavra de reconhecimento...{% endif %}"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-gerar">
+                        {% if is_memorializado %}🕯️ Enviar tributo{% else %}💌 Enviar mensagem{% endif %}
+                    </button>
+                </div>
+                <p class="form-hint">
+                    Mensagens passam por moderação antes de serem publicadas
+                    (Maciel et al., 2019 — recomendação de curadoria humana).
+                </p>
+            </form>
+        </details>
     </section>
     {% endif %}
 
@@ -205,7 +231,7 @@ function mostrarToast(msg) {
 }
 
 function copiarTexto() {
-    const paragrafos = document.querySelectorAll('.memorial-text-principal p');
+    const paragrafos = document.querySelectorAll('.memorial-resumo-curto p');
     const texto = Array.from(paragrafos).map(p => p.textContent.trim()).join('\n\n');
     navigator.clipboard.writeText(texto)
         .then(() => mostrarToast('✓ Texto copiado para a área de transferência!'))
@@ -215,10 +241,7 @@ function copiarTexto() {
 function compartilhar() {
     const url = window.location.href;
     if (navigator.share) {
-        navigator.share({
-            title: document.title,
-            url: url,
-        });
+        navigator.share({ title: document.title, url: url });
     } else {
         navigator.clipboard.writeText(url)
             .then(() => mostrarToast('✓ Link copiado para a área de transferência!'))
