@@ -2,20 +2,51 @@
 {% block title %}{{ memorial.titulo or 'Memorial' }}{% endblock %}
 
 {% block content %}
-<article class="memorial-page">
+{% set is_memorializado = memorial.memorial_status == 'memorializado' %}
+
+<article class="memorial-page {% if is_memorializado %}memorial-em-memoria{% endif %}">
     <!-- Header do Memorial -->
     <header class="memorial-header">
         <div class="memorial-header-bg"></div>
         <div class="memorial-header-content">
+            {% if is_memorializado %}
+            <div class="em-memoria-tag">
+                <span class="vela">🕯️</span> Em memória
+            </div>
+            {% endif %}
+
+            {% if memorial.foto_url %}
+            <img src="{{ memorial.foto_url }}" alt="{{ memorial.nome }}"
+                 class="memorial-foto-lg" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="memorial-avatar-lg" style="display:none">
+                {{ memorial.nome[0] if memorial.nome else '?' }}
+            </div>
+            {% else %}
             <div class="memorial-avatar-lg">
                 {{ memorial.nome[0] if memorial.nome else '?' }}
             </div>
+            {% endif %}
             <h1 class="memorial-nome">{{ memorial.nome }}</h1>
+
+            {% if is_memorializado and (memorial.data_nascimento or memorial.data_falecimento) %}
+            <p class="memorial-datas">
+                {{ memorial.data_nascimento or '?' }}
+                <span class="datas-separator">—</span>
+                {{ memorial.data_falecimento or '?' }}
+            </p>
+            {% endif %}
+
             <p class="memorial-titulo">{{ memorial.titulo }}</p>
+
             <div class="memorial-meta">
                 <span class="meta-item">
                     📅 Criado em {{ memorial.criado_em[:10] if memorial.criado_em else 'N/A' }}
                 </span>
+                {% if memorial.visibilidade == 'privado' %}
+                <span class="meta-item meta-privado">
+                    🔒 Privado
+                </span>
+                {% endif %}
                 {% if memorial.metadata and memorial.metadata.get('modelo') %}
                 <span class="meta-item">
                     🧠 {{ memorial.metadata.modelo }}
@@ -27,6 +58,13 @@
                 </span>
                 {% endif %}
             </div>
+
+            {% if memorial.metadata and memorial.metadata.get('falha_geracao') %}
+            <div class="alert-box">
+                ⚠ A geração automática do texto falhou. Use o botão Editar para
+                escrever o texto manualmente, ou regenere o memorial.
+            </div>
+            {% endif %}
         </div>
     </header>
 
@@ -62,11 +100,19 @@
 
     <!-- Ações -->
     <div class="memorial-actions">
-        <button class="btn-action btn-edit" onclick="toggleEditar()" id="btnEditar">
+        <a href="{{ url_for('editar_memorial', memorial_id=memorial.id) }}" class="btn-action btn-edit">
             ✏️ Editar
-        </button>
+        </a>
+        <form action="{{ url_for('regenerar_memorial', memorial_id=memorial.id) }}"
+              method="POST" class="inline-form"
+              onsubmit="return confirm('Regenerar texto e seções com IA? Isso vai sobrescrever o atual.')">
+            <button type="submit" class="btn-action btn-share">🔄 Regenerar</button>
+        </form>
+        <a href="{{ url_for('configurar_memorial', memorial_id=memorial.id) }}" class="btn-action btn-edit">
+            ⚙️ Configurar
+        </a>
         <button class="btn-action btn-copy" onclick="copiarTexto()">
-            📋 Copiar Texto
+            📋 Copiar
         </button>
         <button class="btn-action btn-share" onclick="compartilhar()">
             🔗 Compartilhar
@@ -75,7 +121,7 @@
             🖨️ Imprimir
         </button>
         <a href="{{ url_for('ver_dados', memorial_id=memorial.id) }}" class="btn-action btn-dados">
-            📊 Dados Extraídos
+            📊 Dados
         </a>
         <form action="{{ url_for('remover_memorial', memorial_id=memorial.id) }}"
               method="POST" class="inline-form"
@@ -86,47 +132,71 @@
         </form>
     </div>
 
+    <!-- Tributos ─────────────────────────────── -->
+    {% if memorial.permitir_tributos %}
+    <section class="tributos-section">
+        <h2 class="secao-titulo" style="text-align:center">
+            {% if is_memorializado %}🕯️ Mensagens em memória{% else %}💬 Mensagens{% endif %}
+            {% if tributos %}<span class="badge">{{ tributos|length }}</span>{% endif %}
+        </h2>
+
+        {% if tributos %}
+        <div class="tributos-list">
+            {% for t in tributos %}
+            <div class="tributo-card">
+                <div class="tributo-header">
+                    <strong>{{ t.autor }}</strong>
+                    <span class="tributo-data">{{ t.criado_em[:10] }}</span>
+                </div>
+                <p class="tributo-mensagem">{{ t.mensagem }}</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted" style="text-align:center;padding:1rem">
+            {% if is_memorializado %}
+                Seja o primeiro a acender uma vela e deixar uma palavra.
+            {% else %}
+                Seja o primeiro a deixar uma mensagem.
+            {% endif %}
+        </p>
+        {% endif %}
+
+        <!-- Formulário de tributo -->
+        <form action="{{ url_for('enviar_tributo', memorial_id=memorial.id) }}"
+              method="POST" class="manual-form" style="margin-top:1.5rem">
+            <div class="form-group">
+                <label for="autor" class="form-label">Seu nome</label>
+                <input type="text" name="autor" id="autor" class="form-input"
+                       maxlength="80" required>
+            </div>
+            <div class="form-group">
+                <label for="mensagem" class="form-label">Sua mensagem</label>
+                <textarea name="mensagem" id="mensagem" class="form-textarea"
+                          rows="4" maxlength="1000" required
+                          placeholder="{% if is_memorializado %}Compartilhe uma lembrança ou uma palavra de despedida...{% else %}Deixe uma palavra de reconhecimento ou pergunta...{% endif %}"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn-gerar">
+                    {% if is_memorializado %}🕯️ Acender vela{% else %}💌 Enviar mensagem{% endif %}
+                </button>
+            </div>
+            <p class="form-hint">
+                Mensagens passam por moderação antes de serem publicadas,
+                garantindo um espaço respeitoso e seguro.
+            </p>
+        </form>
+    </section>
+    {% endif %}
+
     <!-- Toast de feedback -->
     <div class="copy-toast" id="copyToast"></div>
 
-    <!-- Formulário de edição (oculto por padrão) -->
-    <div class="edit-section" id="editSection" style="display:none">
-        <form action="{{ url_for('editar_memorial', memorial_id=memorial.id) }}" method="POST">
-            <h3 class="edit-title">Editar Memorial</h3>
-            <div class="form-group">
-                <label for="editTitulo" class="form-label">Título</label>
-                <input type="text" name="titulo" id="editTitulo"
-                       value="{{ memorial.titulo }}" class="form-input">
-            </div>
-            <div class="form-group">
-                <label for="editTexto" class="form-label">Texto Principal</label>
-                <textarea name="texto_principal" id="editTexto"
-                          class="form-textarea" rows="12">{{ memorial.texto_principal }}</textarea>
-            </div>
-            <div class="edit-actions">
-                <button type="submit" class="btn-gerar">💾 Salvar Alterações</button>
-                <button type="button" class="btn-secondary" onclick="toggleEditar()">Cancelar</button>
-            </div>
-        </form>
-    </div>
 </article>
 {% endblock %}
 
 {% block scripts %}
 <script>
-function toggleEditar() {
-    const section = document.getElementById('editSection');
-    const btn = document.getElementById('btnEditar');
-    if (section.style.display === 'none') {
-        section.style.display = 'block';
-        section.scrollIntoView({ behavior: 'smooth' });
-        btn.textContent = '✕ Fechar';
-    } else {
-        section.style.display = 'none';
-        btn.textContent = '✏️ Editar';
-    }
-}
-
 function mostrarToast(msg) {
     const toast = document.getElementById('copyToast');
     toast.textContent = msg;

@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Moderar tributos — {{ memorial.nome }}{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <a href="{{ url_for('configurar_memorial', memorial_id=memorial.id) }}" class="back-link">
+            ← Voltar à configuração
+        </a>
+        <h1 class="page-title">Moderação de Tributos</h1>
+        <p class="page-subtitle">
+            Memorial de <strong>{{ memorial.nome }}</strong> · {{ tributos|length }} tributo(s)
+        </p>
+    </div>
+
+    {% set pendentes = tributos|selectattr('status', 'equalto', 'pendente')|list %}
+    {% set aprovados = tributos|selectattr('status', 'equalto', 'aprovado')|list %}
+    {% set rejeitados = tributos|selectattr('status', 'equalto', 'rejeitado')|list %}
+
+    <!-- Pendentes ──────────────────────────────── -->
+    {% if pendentes %}
+    <h2 class="config-section-title" style="margin-top:2rem">
+        ⏳ Aguardando moderação ({{ pendentes|length }})
+    </h2>
+    {% for t in pendentes %}
+    <div class="tributo-card tributo-pendente">
+        <div class="tributo-header">
+            <strong>{{ t.autor }}</strong>
+            <span class="tributo-data">{{ t.criado_em[:16] }}</span>
+        </div>
+        <p class="tributo-mensagem">{{ t.mensagem }}</p>
+        <div class="tributo-actions">
+            <form action="{{ url_for('acao_tributo', tributo_id=t.id, acao='aprovar') }}"
+                  method="POST" class="inline-form">
+                <input type="hidden" name="memorial_id" value="{{ memorial.id }}">
+                <button class="btn-action btn-copy">✓ Aprovar</button>
+            </form>
+            <form action="{{ url_for('acao_tributo', tributo_id=t.id, acao='rejeitar') }}"
+                  method="POST" class="inline-form">
+                <input type="hidden" name="memorial_id" value="{{ memorial.id }}">
+                <button class="btn-action">✗ Rejeitar</button>
+            </form>
+            <form action="{{ url_for('acao_tributo', tributo_id=t.id, acao='deletar') }}"
+                  method="POST" class="inline-form"
+                  onsubmit="return confirm('Remover permanentemente?')">
+                <input type="hidden" name="memorial_id" value="{{ memorial.id }}">
+                <button class="btn-action btn-delete">🗑️ Apagar</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Aprovados ──────────────────────────────── -->
+    {% if aprovados %}
+    <h2 class="config-section-title" style="margin-top:2rem">
+        ✓ Publicados ({{ aprovados|length }})
+    </h2>
+    {% for t in aprovados %}
+    <div class="tributo-card">
+        <div class="tributo-header">
+            <strong>{{ t.autor }}</strong>
+            <span class="tributo-data">{{ t.criado_em[:16] }}</span>
+        </div>
+        <p class="tributo-mensagem">{{ t.mensagem }}</p>
+        <div class="tributo-actions">
+            <form action="{{ url_for('acao_tributo', tributo_id=t.id, acao='rejeitar') }}"
+                  method="POST" class="inline-form">
+                <input type="hidden" name="memorial_id" value="{{ memorial.id }}">
+                <button class="btn-action">↩ Despublicar</button>
+            </form>
+            <form action="{{ url_for('acao_tributo', tributo_id=t.id, acao='deletar') }}"
+                  method="POST" class="inline-form"
+                  onsubmit="return confirm('Remover permanentemente?')">
+                <input type="hidden" name="memorial_id" value="{{ memorial.id }}">
+                <button class="btn-action btn-delete">🗑️</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Rejeitados ────────────────────────────── -->
+    {% if rejeitados %}
+    <details style="margin-top:2rem">
+        <summary class="json-summary">
+            ✗ Rejeitados ({{ rejeitados|length }})
+        </summary>
+        {% for t in rejeitados %}
+        <div class="tributo-card tributo-rejeitado">
+            <div class="tributo-header">
+                <strong>{{ t.autor }}</strong>
+                <span class="tributo-data">{{ t.criado_em[:16] }}</span>
+            </div>
+            <p class="tributo-mensagem">{{ t.mensagem }}</p>
+            <div class="tributo-actions">
+                <form action="{{ url_for('acao_tributo', tributo_id=t.id, acao='aprovar') }}"
+                      method="POST" class="inline-form">
+                    <input type="hidden" name="memorial_id" value="{{ memorial.id }}">
+                    <button class="btn-action btn-copy">↺ Reaprovar</button>
+                </form>
+                <form action="{{ url_for('acao_tributo', tributo_id=t.id, acao='deletar') }}"
+                      method="POST" class="inline-form"
+                      onsubmit="return confirm('Remover permanentemente?')">
+                    <input type="hidden" name="memorial_id" value="{{ memorial.id }}">
+                    <button class="btn-action btn-delete">🗑️</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </details>
+    {% endif %}
+
+    {% if not tributos %}
+    <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <h3>Nenhum tributo ainda</h3>
+        <p>Tributos enviados pelos visitantes aparecerão aqui para moderação.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

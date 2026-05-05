@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block title %}Criar Memorial{% endblock %}
+
+{% block content %}
+<div class="page-container" style="max-width:780px">
+    <div class="page-header">
+        <a href="{{ url_for('index') }}" class="back-link">← Voltar ao início</a>
+        <h1 class="page-title">Criar novo memorial</h1>
+        <p class="page-subtitle">
+            Escolha a fonte dos dados. Você pode editar tudo depois.
+        </p>
+    </div>
+
+    <!-- Tabs entre Lattes e Manual -->
+    <div class="tab-container">
+        <button class="tab-btn active" onclick="trocarFonte('lattes')" id="tabBtnLattes">
+            🎓 Currículo Lattes
+        </button>
+        <button class="tab-btn" onclick="trocarFonte('manual')" id="tabBtnManual">
+            ✍️ Entrada Manual
+        </button>
+    </div>
+
+    <!-- Status do memorial (compartilhado por ambas as fontes) -->
+    <div class="status-chooser">
+        <label class="status-option">
+            <input type="radio" name="status_choice" value="ativo" checked
+                   onchange="sincronizarStatus(this.value)">
+            <div>
+                <span class="status-icon">🟢</span>
+                <strong>Perfil ativo</strong>
+                <span class="status-desc">Pessoa em atividade — texto no presente</span>
+            </div>
+        </label>
+        <label class="status-option">
+            <input type="radio" name="status_choice" value="memorializado"
+                   onchange="sincronizarStatus(this.value)">
+            <div>
+                <span class="status-icon">🕯️</span>
+                <strong>Em memória</strong>
+                <span class="status-desc">Pessoa falecida — texto no passado</span>
+            </div>
+        </label>
+    </div>
+
+    <!-- Datas (mostra só se memorializado) -->
+    <div class="datas-section" id="datasSection" style="display:none">
+        <div class="datas-row">
+            <div class="form-group">
+                <label class="form-label">Nascimento</label>
+                <input type="date" id="dataNascimento" class="form-input">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Falecimento</label>
+                <input type="date" id="dataFalecimento" class="form-input">
+            </div>
+        </div>
+    </div>
+
+    <!-- Fonte: Lattes ─────────────────────────── -->
+    <form action="{{ url_for('gerar') }}" method="POST" class="manual-form" id="formLattes">
+        <input type="hidden" name="memorial_status" id="statusLattes" value="ativo">
+        <input type="hidden" name="data_nascimento" id="nascLattes">
+        <input type="hidden" name="data_falecimento" id="falLattes">
+
+        <div class="form-group">
+            <label class="form-label">URL do Currículo Lattes</label>
+            <div class="input-wrapper">
+                <span class="input-icon">🔗</span>
+                <input type="url" name="url_lattes" class="input-url"
+                       placeholder="http://lattes.cnpq.br/0000000000000000" required>
+            </div>
+            <p class="form-hint">
+                A foto da pessoa também será capturada automaticamente, se disponível.
+            </p>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-gerar">
+                ✨ Gerar Memorial do Lattes
+            </button>
+        </div>
+    </form>
+
+    <!-- Fonte: Manual ───────────────────────── -->
+    <form action="{{ url_for('gerar_manual') }}" method="POST" class="manual-form"
+          id="formManual" style="display:none" enctype="multipart/form-data">
+        <input type="hidden" name="memorial_status" id="statusManual" value="ativo">
+        <input type="hidden" name="data_nascimento" id="nascManual">
+        <input type="hidden" name="data_falecimento" id="falManual">
+
+        <div class="form-group">
+            <label class="form-label">Nome completo *</label>
+            <input type="text" name="nome" class="form-input"
+                   placeholder="Ex: Maria Silva Santos" required>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Foto (opcional)</label>
+            <input type="file" name="foto" accept="image/*" class="form-input">
+            <p class="form-hint">JPG, PNG ou WebP. Será exibida no header do memorial.</p>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Resumo / Biografia</label>
+            <textarea name="resumo" class="form-textarea" rows="6"
+                      placeholder="Descreva quem é/foi a pessoa em alguns parágrafos. Este texto será usado como base do memorial."></textarea>
+            <p class="form-hint">
+                Este texto é o "coração" do memorial. Pode ser editado depois.
+            </p>
+        </div>
+
+        <details class="json-details" style="margin-top:0.5rem">
+            <summary class="json-summary">📋 Adicionar mais detalhes (opcional)</summary>
+
+            <div class="form-row" style="margin-top:1rem">
+                <div class="form-group">
+                    <label class="form-label">Formação acadêmica</label>
+                    <textarea name="formacao" class="form-textarea" rows="3"
+                              placeholder="Uma por linha&#10;Doutorado em ... (2010)&#10;Mestrado em ... (2003)"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Atuação profissional</label>
+                    <textarea name="atuacao_profissional" class="form-textarea" rows="3"
+                              placeholder="Uma por linha&#10;Professor Titular - UFMT (2005-2024)"></textarea>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Áreas de atuação</label>
+                    <textarea name="areas_atuacao" class="form-textarea" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Idiomas</label>
+                    <textarea name="idiomas" class="form-textarea" rows="2"></textarea>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Produções e publicações</label>
+                <textarea name="producoes_bibliograficas" class="form-textarea" rows="3"></textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Orientações</label>
+                    <textarea name="orientacoes" class="form-textarea" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Projetos</label>
+                    <textarea name="projetos" class="form-textarea" rows="2"></textarea>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Prêmios e títulos</label>
+                <textarea name="premios" class="form-textarea" rows="2"></textarea>
+            </div>
+        </details>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-gerar">
+                ✨ Gerar Memorial Manualmente
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function trocarFonte(qual) {
+    document.getElementById('formLattes').style.display = qual === 'lattes' ? '' : 'none';
+    document.getElementById('formManual').style.display = qual === 'manual' ? '' : 'none';
+    document.getElementById('tabBtnLattes').classList.toggle('active', qual === 'lattes');
+    document.getElementById('tabBtnManual').classList.toggle('active', qual === 'manual');
+}
+
+function sincronizarStatus(valor) {
+    document.getElementById('statusLattes').value = valor;
+    document.getElementById('statusManual').value = valor;
+    document.getElementById('datasSection').style.display =
+        valor === 'memorializado' ? '' : 'none';
+}
+
+// Sincroniza datas
+['Nascimento', 'Falecimento'].forEach(campo => {
+    const input = document.getElementById('data' + campo);
+    if (!input) return;
+    input.addEventListener('change', () => {
+        const target = campo === 'Nascimento' ? 'nasc' : 'fal';
+        document.getElementById(target + 'Lattes').value = input.value;
+        document.getElementById(target + 'Manual').value = input.value;
+    });
+});
+</script>
+{% endblock %}

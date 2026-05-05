@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block title %}Memorial — Entrada Manual{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <a href="{{ url_for('index') }}" class="back-link">← Voltar ao início</a>
+        <h1 class="page-title">Memorial por Entrada Manual</h1>
+        <p class="page-subtitle">
+            Use esta opção quando não houver currículo Lattes, ou quando quiser ter
+            controle total sobre os dados que entram no memorial. Esta é a forma mais
+            alinhada ao princípio de <strong>volição</strong>: você (ou um familiar
+            autorizado) decide o que será preservado.
+        </p>
+    </div>
+
+    <!-- Tabs entre formulário e JSON -->
+    <div class="tab-container">
+        <button class="tab-btn active" onclick="trocarTab('form')" id="tabBtnForm">
+            ✍️ Formulário guiado
+        </button>
+        <button class="tab-btn" onclick="trocarTab('json')" id="tabBtnJson">
+            🧾 Colar JSON
+        </button>
+    </div>
+
+    <!-- Aba: Formulário ─────────────────────────── -->
+    <form action="{{ url_for('gerar_manual') }}" method="POST" class="manual-form" id="formManual">
+
+        <!-- Status do memorial -->
+        <div class="status-chooser">
+            <label class="status-option">
+                <input type="radio" name="memorial_status" value="ativo" checked>
+                <div>
+                    <span class="status-icon">🟢</span>
+                    <strong>Perfil ativo</strong>
+                    <span class="status-desc">Pessoa em atividade</span>
+                </div>
+            </label>
+            <label class="status-option">
+                <input type="radio" name="memorial_status" value="memorializado">
+                <div>
+                    <span class="status-icon">🕯️</span>
+                    <strong>Em memória</strong>
+                    <span class="status-desc">Pessoa falecida</span>
+                </div>
+            </label>
+        </div>
+
+        <div class="datas-section" id="datasSectionManual" style="display:none">
+            <div class="datas-row">
+                <div class="form-group">
+                    <label class="form-label">Nascimento</label>
+                    <input type="date" name="data_nascimento" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Falecimento</label>
+                    <input type="date" name="data_falecimento" class="form-input">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="nome" class="form-label">Nome completo *</label>
+            <input type="text" name="nome" id="nome" class="form-input"
+                   placeholder="Ex: Maria Silva Santos" required>
+        </div>
+
+        <div class="form-group">
+            <label for="resumo" class="form-label">Resumo / Biografia curta</label>
+            <textarea name="resumo" id="resumo" class="form-textarea" rows="4"
+                      placeholder="Um parágrafo sobre a pessoa..."></textarea>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="formacao" class="form-label">Formação acadêmica</label>
+                <textarea name="formacao" class="form-textarea" rows="4"
+                          placeholder="Uma entrada por linha. Ex:&#10;Doutorado em Educação - USP (2010)&#10;Mestrado em Pedagogia - UFMG (2003)"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="atuacao_profissional" class="form-label">Atuação profissional</label>
+                <textarea name="atuacao_profissional" class="form-textarea" rows="4"
+                          placeholder="Uma entrada por linha. Ex:&#10;Professora Titular - UFMT (2005-2024)&#10;Coordenadora do Programa X (2010-2015)"></textarea>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="areas_atuacao" class="form-label">Áreas de atuação</label>
+                <textarea name="areas_atuacao" class="form-textarea" rows="3"
+                          placeholder="Uma por linha. Ex:&#10;Educação&#10;Pesquisa em IHC"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="idiomas" class="form-label">Idiomas</label>
+                <textarea name="idiomas" class="form-textarea" rows="3"
+                          placeholder="Uma por linha. Ex:&#10;Português (nativo)&#10;Inglês (avançado)"></textarea>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="producoes_bibliograficas" class="form-label">Produções e publicações</label>
+            <textarea name="producoes_bibliograficas" class="form-textarea" rows="5"
+                      placeholder="Uma por linha. Livros, artigos, capítulos..."></textarea>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="orientacoes" class="form-label">Orientações</label>
+                <textarea name="orientacoes" class="form-textarea" rows="3"
+                          placeholder="TCCs, dissertações, teses orientadas..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="projetos" class="form-label">Projetos</label>
+                <textarea name="projetos" class="form-textarea" rows="3"
+                          placeholder="Projetos de pesquisa ou extensão..."></textarea>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="premios" class="form-label">Prêmios e reconhecimentos</label>
+            <textarea name="premios" class="form-textarea" rows="3"
+                      placeholder="Uma por linha..."></textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-gerar">
+                ✨ Gerar Memorial com IA
+            </button>
+        </div>
+
+        <p class="form-hint">
+            * Apenas o nome é obrigatório. Quanto mais campos você preencher,
+            mais rico será o memorial. Campos vazios são simplesmente omitidos —
+            a IA <strong>nunca</strong> inventa dados que você não forneceu.
+        </p>
+    </form>
+
+    <!-- Aba: JSON ────────────────────────────────── -->
+    <form action="{{ url_for('gerar_manual') }}" method="POST" class="manual-form" id="formJson" style="display:none">
+        <div class="form-group">
+            <label for="dados_json" class="form-label">JSON com os dados estruturados</label>
+            <textarea name="dados_json" id="dados_json" class="form-textarea code-textarea" rows="20"
+                      placeholder='{"nome": "Maria Silva", "resumo": "...", "formacao": ["Doutorado..."]}'></textarea>
+        </div>
+
+        <details class="json-details">
+            <summary class="json-summary">📘 Ver formato esperado</summary>
+            <pre class="json-raw"><code>{
+  "nome": "Maria Silva Santos",
+  "resumo": "Pesquisadora dedicada à educação...",
+  "formacao": [
+    "Doutorado em Educação - USP (2010)",
+    "Mestrado em Pedagogia - UFMG (2003)"
+  ],
+  "atuacao_profissional": [
+    "Professora Titular - UFMT (2005-2024)"
+  ],
+  "areas_atuacao": ["Educação", "IHC"],
+  "producoes_bibliograficas": ["..."],
+  "orientacoes": ["..."],
+  "projetos": ["..."],
+  "premios": ["..."],
+  "idiomas": ["Português (nativo)", "Inglês (avançado)"]
+}</code></pre>
+        </details>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-gerar">
+                ✨ Gerar a partir do JSON
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function trocarTab(qual) {
+    const formForm = document.getElementById('formManual');
+    const formJson = document.getElementById('formJson');
+    const btnForm = document.getElementById('tabBtnForm');
+    const btnJson = document.getElementById('tabBtnJson');
+
+    if (qual === 'form') {
+        formForm.style.display = '';
+        formJson.style.display = 'none';
+        btnForm.classList.add('active');
+        btnJson.classList.remove('active');
+    } else {
+        formForm.style.display = 'none';
+        formJson.style.display = '';
+        btnJson.classList.add('active');
+        btnForm.classList.remove('active');
+    }
+}
+
+// Mostra datas se memorializado
+document.querySelectorAll('input[name="memorial_status"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+        const datas = document.getElementById('datasSectionManual');
+        if (datas) {
+            datas.style.display = radio.value === 'memorializado' && radio.checked ? '' : 'none';
+        }
+    });
+});
+</script>
+{% endblock %}

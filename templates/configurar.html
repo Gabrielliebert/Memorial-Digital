@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Configurar — {{ memorial.nome }}{% endblock %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <a href="{{ url_for('ver_memorial', memorial_id=memorial.id) }}" class="back-link">
+            ← Voltar ao memorial
+        </a>
+        <h1 class="page-title">Configurações do Memorial</h1>
+        <p class="page-subtitle">
+            Estas opções controlam <strong>quem pode ver</strong> e
+            <strong>quem pode interagir</strong> com o memorial de
+            <strong>{{ memorial.nome }}</strong>. Configurações alinhadas aos
+            princípios de Maciel et al. (2019) e Ueda et al. (2022).
+        </p>
+    </div>
+
+    <form action="{{ url_for('configurar_memorial', memorial_id=memorial.id) }}" method="POST" class="manual-form">
+
+        <!-- Visibilidade ───────────────────────── -->
+        <div class="config-section">
+            <h2 class="config-section-title">🔒 Privacidade</h2>
+            <p class="config-section-desc">
+                Define quem pode acessar este memorial.
+            </p>
+
+            <div class="radio-group">
+                <label class="radio-card">
+                    <input type="radio" name="visibilidade" value="publico"
+                           {% if memorial.visibilidade == 'publico' or not memorial.visibilidade %}checked{% endif %}>
+                    <div>
+                        <strong>Público</strong>
+                        <span>Qualquer pessoa com o link pode ver.</span>
+                    </div>
+                </label>
+                <label class="radio-card">
+                    <input type="radio" name="visibilidade" value="privado"
+                           {% if memorial.visibilidade == 'privado' %}checked{% endif %}>
+                    <div>
+                        <strong>Privado</strong>
+                        <span>Apenas pessoas com a chave de acesso direto.</span>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <!-- Status ─────────────────────────────── -->
+        <div class="config-section">
+            <h2 class="config-section-title">📌 Status do memorial</h2>
+            <p class="config-section-desc">
+                Diferencia memoriais de pessoas vivas (perfil profissional)
+                de memoriais comemorativos pós-vida (Ueda 2022).
+            </p>
+
+            <div class="radio-group">
+                <label class="radio-card">
+                    <input type="radio" name="memorial_status" value="ativo"
+                           {% if memorial.memorial_status == 'ativo' or not memorial.memorial_status %}checked{% endif %}>
+                    <div>
+                        <strong>Ativo</strong>
+                        <span>Pessoa viva — perfil profissional/biográfico.</span>
+                    </div>
+                </label>
+                <label class="radio-card">
+                    <input type="radio" name="memorial_status" value="memorializado"
+                           {% if memorial.memorial_status == 'memorializado' %}checked{% endif %}>
+                    <div>
+                        <strong>Memorializado</strong>
+                        <span>Pessoa falecida — espaço de tributos e memória.</span>
+                    </div>
+                </label>
+            </div>
+        </div>
+
+        <!-- Gestor de legado ───────────────────── -->
+        <div class="config-section">
+            <h2 class="config-section-title">👤 Gestor de legado</h2>
+            <p class="config-section-desc">
+                Pessoa autorizada a alterar este memorial após o falecimento do titular.
+                Pode editar texto, moderar tributos e ajustar privacidade.
+                <strong>Não pode</strong> alterar o nome ou apagar a história factual.
+            </p>
+
+            <div class="form-group">
+                <label for="legacy_manager_email" class="form-label">E-mail do gestor</label>
+                <input type="email" name="legacy_manager_email" id="legacy_manager_email"
+                       class="form-input" value="{{ memorial.legacy_manager_email or '' }}"
+                       placeholder="herdeiro@exemplo.com">
+            </div>
+        </div>
+
+        <!-- Tributos ────────────────────────────── -->
+        <div class="config-section">
+            <h2 class="config-section-title">💬 Colaboração</h2>
+            <p class="config-section-desc">
+                Tributos permitem que outras pessoas deixem mensagens. Toda mensagem
+                passa por moderação antes de aparecer publicamente.
+            </p>
+
+            <label class="checkbox-line">
+                <input type="checkbox" name="permitir_tributos"
+                       {% if memorial.permitir_tributos %}checked{% endif %}>
+                <span>Permitir que visitantes enviem tributos</span>
+            </label>
+        </div>
+
+        <!-- Consentimento ─────────────────────── -->
+        <div class="config-section">
+            <h2 class="config-section-title">✓ Consentimento</h2>
+            <p class="config-section-desc">
+                Confirme que o titular (ou herdeiro autorizado) aprovou a
+                criação e exibição deste memorial.
+            </p>
+
+            <label class="checkbox-line">
+                <input type="checkbox" name="consentimento"
+                       {% if memorial.consentimento %}checked{% endif %}>
+                <span>Há consentimento expresso para exibição pública</span>
+            </label>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-gerar">💾 Salvar configurações</button>
+            <a href="{{ url_for('moderar_tributos', memorial_id=memorial.id) }}"
+               class="btn-action btn-edit">
+                🛡️ Moderar tributos
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

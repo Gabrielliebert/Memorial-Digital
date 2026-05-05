@@ -22,6 +22,7 @@ def parse_lattes(html: str) -> dict:
     soup = BeautifulSoup(html, "lxml")
     dados = {
         "nome": _extrair_nome(soup),
+        "foto_url": _extrair_foto(soup),
         "resumo": _extrair_resumo(soup),
         "formacao": _extrair_formacao(soup),
         "atuacao_profissional": _extrair_atuacao(soup),
@@ -33,6 +34,34 @@ def parse_lattes(html: str) -> dict:
         "idiomas": _extrair_idiomas(soup),
     }
     return dados
+
+
+def _extrair_foto(soup: BeautifulSoup) -> str | None:
+    """
+    Extrai a URL da foto do pesquisador no Lattes.
+
+    O Lattes serve fotos via servletrecuperafoto?id=XXXX. Tenta vários
+    seletores comuns e retorna a URL absoluta. Retorna None se não encontrar.
+    """
+    # Seletor principal: img com class "foto" ou dentro de div.foto
+    candidatos = [
+        soup.select_one("img.foto"),
+        soup.select_one("div.foto img"),
+        soup.select_one("div.foto-perfil img"),
+        soup.select_one("img[src*='servletrecuperafoto']"),
+        soup.select_one("img[src*='foto']"),
+    ]
+    for img in candidatos:
+        if img and img.get("src"):
+            src = img["src"].strip()
+            # Construir URL absoluta se for relativa
+            if src.startswith("//"):
+                return "https:" + src
+            if src.startswith("/"):
+                return "http://buscatextual.cnpq.br" + src
+            if src.startswith("http"):
+                return src
+    return None
 
 
 def _extrair_nome(soup: BeautifulSoup) -> str:

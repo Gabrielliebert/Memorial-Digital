@@ -1401,11 +1401,546 @@ a:hover { color: var(--accent-secondary); }
 }
 
 /* ═══════════════════════════════════════════════════
+   Manual form (manual.html)
+   ═══════════════════════════════════════════════════ */
+.tab-container {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    padding: 0.85rem 1.25rem;
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all var(--transition-fast);
+}
+
+.tab-btn:hover { color: var(--text-primary); }
+
+.tab-btn.active {
+    color: var(--accent-primary);
+    border-bottom-color: var(--accent-primary);
+}
+
+.manual-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+}
+
+@media (max-width: 720px) {
+    .form-row { grid-template-columns: 1fr; }
+}
+
+.code-textarea {
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 0.82rem;
+    line-height: 1.5;
+}
+
+.form-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.form-hint {
+    margin-top: 0.5rem;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+/* Cartão de escolha de fonte na home */
+.fontes-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    max-width: 650px;
+    margin: 1.5rem auto 0;
+}
+
+@media (max-width: 640px) {
+    .fontes-grid { grid-template-columns: 1fr; }
+}
+
+.fonte-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 1.25rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    transition: all var(--transition-normal);
+    text-decoration: none;
+}
+
+.fonte-card:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-accent);
+    transform: translateY(-2px);
+}
+
+.fonte-card-icon {
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.fonte-card-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.25rem;
+}
+
+.fonte-card-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+/* ═══════════════════════════════════════════════════
+   Configuração do memorial (configurar.html)
+   ═══════════════════════════════════════════════════ */
+.config-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.config-section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.config-section-desc {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 1.25rem;
+    line-height: 1.6;
+}
+
+.radio-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+@media (max-width: 640px) { .radio-group { grid-template-columns: 1fr; } }
+
+.radio-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.radio-card:hover { border-color: var(--border-accent); }
+
+.radio-card input[type="radio"]:checked + div strong {
+    color: var(--accent-primary);
+}
+
+.radio-card:has(input:checked) {
+    border-color: var(--accent-primary);
+    background: var(--accent-soft);
+}
+
+.radio-card div { display: flex; flex-direction: column; gap: 0.2rem; }
+.radio-card strong { font-size: 0.92rem; }
+.radio-card span { font-size: 0.8rem; color: var(--text-secondary); }
+
+.checkbox-line {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.6rem 0.75rem;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.checkbox-line input { cursor: pointer; }
+
+/* ═══════════════════════════════════════════════════
+   Tributos
+   ═══════════════════════════════════════════════════ */
+.tributos-section {
+    max-width: 800px;
+    margin: 2rem auto 3rem;
+    padding: 0 2rem;
+}
+
+.tributos-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    margin: 1.5rem 0;
+}
+
+.tributo-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.25rem;
+}
+
+.tributo-pendente {
+    border-left: 3px solid var(--color-warning);
+}
+
+.tributo-rejeitado {
+    opacity: 0.55;
+    border-left: 3px solid var(--color-error);
+}
+
+.tributo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.tributo-header strong { color: var(--accent-primary); }
+
+.tributo-data {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+}
+
+.tributo-mensagem {
+    font-size: 0.92rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.tributo-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.85rem;
+    flex-wrap: wrap;
+}
+
+.badge {
+    display: inline-block;
+    background: var(--accent-glow);
+    color: var(--accent-primary);
+    border-radius: 999px;
+    padding: 0.1rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+}
+
+/* ═══════════════════════════════════════════════════
+   Status chooser (alive vs memorialized) na criação
+   ═══════════════════════════════════════════════════ */
+.status-chooser {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin: 1.25rem 0 1rem;
+}
+
+@media (max-width: 640px) { .status-chooser { grid-template-columns: 1fr; } }
+
+.status-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.85rem 1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.status-option:hover { border-color: var(--border-accent); }
+.status-option:has(input:checked) {
+    border-color: var(--accent-primary);
+    background: var(--accent-soft);
+}
+
+.status-option div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    flex: 1;
+}
+
+.status-option strong { font-size: 0.92rem; }
+.status-option .status-icon { font-size: 1.1rem; }
+.status-option .status-desc {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
+.datas-section {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.datas-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+@media (max-width: 640px) { .datas-row { grid-template-columns: 1fr; } }
+
+/* ═══════════════════════════════════════════════════
+   Memorial "Em memória" — visual sóbrio
+   ═══════════════════════════════════════════════════ */
+.memorial-em-memoria .memorial-header {
+    background: linear-gradient(180deg, #1f1d2b 0%, #15131c 100%);
+}
+
+.memorial-em-memoria .memorial-header-bg {
+    opacity: 0.4;
+}
+
+.memorial-em-memoria .memorial-avatar-lg {
+    background: linear-gradient(135deg, #6b6980, #4a4858);
+    box-shadow: 0 0 40px rgba(255, 240, 200, 0.08);
+}
+
+.em-memoria-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.95rem;
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.25);
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #fbbf24;
+    margin-bottom: 1.25rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.vela {
+    animation: candleFlicker 2.5s ease-in-out infinite;
+    display: inline-block;
+}
+
+@keyframes candleFlicker {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.85; transform: scale(1.08); }
+}
+
+.memorial-datas {
+    font-family: var(--font-editorial);
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    margin: 0.25rem 0 0.75rem;
+    letter-spacing: 1px;
+}
+
+.datas-separator {
+    margin: 0 0.5rem;
+    color: var(--text-muted);
+}
+
+.meta-privado {
+    color: var(--color-info);
+    background: rgba(96, 165, 250, 0.08);
+    padding: 0.15rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid rgba(96, 165, 250, 0.2);
+}
+
+.alert-box {
+    margin-top: 1rem;
+    padding: 0.85rem 1.25rem;
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.25);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    color: var(--color-warning);
+    text-align: left;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* ═══════════════════════════════════════════════════
+   Landing page — escolha Buscar / Criar
+   ═══════════════════════════════════════════════════ */
+.acoes-principais {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    max-width: 720px;
+    margin: 2.5rem auto 0;
+}
+
+@media (max-width: 640px) {
+    .acoes-principais { grid-template-columns: 1fr; }
+}
+
+.acao-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    color: var(--text-primary);
+    transition: all var(--transition-normal);
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.acao-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 0%, var(--accent-soft) 100%);
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+    pointer-events: none;
+}
+
+.acao-card:hover::before { opacity: 1; }
+.acao-card:hover {
+    border-color: var(--border-accent);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+}
+
+.acao-card-primario {
+    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-elevated) 100%);
+    border-color: var(--border-accent);
+}
+
+.acao-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.acao-titulo {
+    font-family: var(--font-editorial);
+    font-size: 1.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.acao-desc {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+    flex: 1;
+}
+
+.acao-meta {
+    color: var(--accent-primary);
+    font-size: 0.82rem;
+    font-weight: 500;
+}
+
+.acao-cta {
+    display: inline-block;
+    padding: 0.6rem 1.5rem;
+    background: var(--accent-primary);
+    color: white;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════════
+   Foto do memorial (header e cards)
+   ═══════════════════════════════════════════════════ */
+.memorial-foto-lg {
+    width: 130px;
+    height: 130px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--accent-primary);
+    box-shadow: var(--shadow-glow);
+    margin-bottom: 1rem;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.memorial-em-memoria .memorial-foto-lg {
+    border-color: rgba(251, 191, 36, 0.5);
+    filter: saturate(0.85);
+}
+
+.memorial-card-foto {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════
+   Edição: seções dinâmicas
+   ═══════════════════════════════════════════════════ */
+.secao-edit {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.secao-edit .btn-action {
+    align-self: flex-end;
+    font-size: 0.78rem;
+    padding: 0.35rem 0.75rem;
+}
+
+/* ═══════════════════════════════════════════════════
    Print styles
    ═══════════════════════════════════════════════════ */
 @media print {
     .navbar, .footer, .memorial-actions, .edit-section,
-    .flash-container, .bg-particles { display: none !important; }
+    .flash-container, .bg-particles, .tributos-section { display: none !important; }
 
     body { background: white; color: black; }
 
