@@ -115,7 +115,7 @@ def _chamar_gemini(prompt: str) -> str:
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
             "temperature": config.LLM_TEMPERATURE,
-            "maxOutputTokens": 1500,
+            "maxOutputTokens": 200,  # ~150 palavras max — força resumo curto
             "responseMimeType": "text/plain",
         },
     }
@@ -196,48 +196,57 @@ def _chamar_ollama(prompt: str) -> str:
 
 def _construir_prompt_resumo(dados: dict, status: str) -> str:
     """
-    Prompt direto e simples: "RESUMA estes dados".
-    Sem JSON. Sem few-shot longo. Foco em síntese verdadeira.
+    Prompt para gerar um RESUMO ENXUTO (2-3 frases, ~40-60 palavras).
+
+    Embasamento — princípio de "informação essencial primeiro" em memoriais
+    digitais (Lopes, Maciel & Pereira, 2014; Maciel et al., 2019). O texto
+    inicial deve apresentar a identidade essencial. Detalhes vão para seções
+    expansíveis (progressive disclosure — Maciel et al., 2019).
     """
     nome = dados.get("nome", "Pesquisador(a)")
     dados_texto = _formatar_dados_para_prompt(dados)
 
     if status == "memorializado":
-        instrucao_tom = (
-            "Escreva no PASSADO, como tributo respeitoso a alguém que faleceu. "
-            "Use 'foi', 'atuou', 'dedicou-se', 'deixou um legado'. "
-            "Tom solene mas celebratório da trajetória."
+        instrucao_tom = "Escreva no PASSADO. Tom de tributo respeitoso."
+        verbo_ex = "foi"
+        exemplo = (
+            f"{nome} foi professor universitário e pesquisador, "
+            "com atuação principal em Educação Matemática. "
+            "Deixou contribuições marcantes na formação docente e "
+            "na pesquisa em didática da matemática no Brasil."
         )
-        verbo_principal = "foi"
     else:
-        instrucao_tom = (
-            "Escreva no PRESENTE para a atuação atual ('é', 'atua', 'coordena') "
-            "e no PASSADO para conquistas concluídas ('formou-se', 'recebeu'). "
-            "Tom respeitoso e factual, perfil profissional."
+        instrucao_tom = "Escreva no PRESENTE para atuação atual."
+        verbo_ex = "é"
+        exemplo = (
+            f"{nome} é professor universitário e pesquisador, "
+            "com atuação principal em Interação Humano-Computador. "
+            "Tem contribuições reconhecidas em legado digital pós-morte "
+            "e memoriais digitais."
         )
-        verbo_principal = "é"
 
     prompt = f"""/no_think
 
-Você é um biógrafo brasileiro experiente. Sua tarefa: escrever um RESUMO BIOGRÁFICO original de {nome}.
+Tarefa: escrever um RESUMO MUITO CURTO de {nome}.
 
-{instrucao_tom}
+REGRAS CRÍTICAS:
+1. APENAS 2 OU 3 FRASES. Total entre 40 e 70 palavras. NÃO ULTRAPASSE.
+2. EM PORTUGUÊS DO BRASIL. Nunca em inglês.
+3. Estrutura: (a) quem {verbo_ex}; (b) área PRINCIPAL de atuação (escolha apenas 1 ou 2, NÃO liste todas); (c) UMA contribuição/destaque mais relevante.
+4. Use APENAS fatos dos DADOS. Nunca invente.
+5. {instrucao_tom}
+6. NÃO use markdown (sem **, *, #, -, listas).
+7. Comece com o nome.
+8. Texto corrido, sem títulos, sem despedidas, sem "em conclusão".
 
-REGRAS RÍGIDAS:
-1. Escreva EM PORTUGUÊS DO BRASIL. Nunca em inglês.
-2. NÃO COPIE o resumo original. Sintetize com SUAS PALAVRAS.
-3. Estruture em 3 a 4 parágrafos curtos (50-80 palavras cada).
-4. Mencione: quem {verbo_principal}, formação principal, atuação principal, áreas e contribuições mais relevantes.
-5. Use APENAS fatos dos DADOS abaixo. Nunca invente datas, instituições ou trabalhos.
-6. NÃO use markdown: nada de **, *, #, -, listas numeradas.
-7. Apenas prosa contínua. Sem títulos de seção. Sem despedidas.
-8. Comece DIRETAMENTE com o nome (ex: "{nome} {verbo_principal}...")
+EXEMPLO de formato e tamanho esperados:
+"{exemplo}"
 
 DADOS DE {nome.upper()}:
 
 {dados_texto}
 
-Agora escreva o resumo biográfico. Apenas o texto, sem comentários."""
+Responda APENAS com o resumo curto (2-3 frases). Nada mais."""
     return prompt
 
 
@@ -319,9 +328,14 @@ def _sanitizar_texto(texto: str, nome: str) -> str:
 
 
 def _texto_valido(texto: str, nome: str) -> bool:
-    """Valida que o texto gerado é utilizável."""
-    if not texto or len(texto) < 100:
+    """Valida que o texto gerado é utilizável (resumo curto: 50-500 chars)."""
+    if not texto or len(texto) < 50:
         return False
+    if len(texto) > 800:  # se passou muito, IA ignorou a regra de tamanho
+        print(f"[Gerador] ⚠ Texto muito longo ({len(texto)} chars). Truncando...")
+        # Mantém apenas as primeiras 3 frases
+        frases = re.split(r"(?<=[.!?])\s+", texto)
+        return False  # rejeita e força regenerar/fallback
     # Detectar texto em inglês (heurística)
     marcadores_en = [" the ", " and ", " his ", " her ", " was ", " were "]
     txt_lower = " " + texto.lower() + " "
@@ -339,46 +353,42 @@ def _texto_valido(texto: str, nome: str) -> bool:
 # ═══════════════════════════════════════════════════════════════════
 
 def _montar_texto_fallback(dados: dict, status: str) -> str:
-    """Monta texto curto a partir dos dados estruturados, sem IA."""
+    """
+    Fallback determinístico: monta resumo CURTO (2-3 frases).
+    Embasamento: princípio de identidade essencial em memoriais
+    digitais (Lopes, Maciel & Pereira, 2014).
+    """
     nome = dados.get("nome", "Pesquisador(a)")
     verbo = "foi" if status == "memorializado" else "é"
 
-    partes = []
+    # Frase 1: identidade básica + área principal (apenas 1-2 áreas)
+    areas = dados.get("areas_atuacao", [])
+    nomes_areas = []
+    for a in areas[:2]:  # apenas as 2 primeiras
+        n = a.get("descricao") if isinstance(a, dict) else str(a)
+        if n:
+            # Remove códigos como "Grande área:", deixa só o termo principal
+            n_limpo = re.sub(r"^[^:]*:\s*", "", n).strip()
+            if n_limpo:
+                nomes_areas.append(n_limpo)
 
-    # Frase de abertura
-    formacao = dados.get("formacao", [])
-    if formacao:
-        primeira = formacao[0]
-        descr = primeira.get("descricao") if isinstance(primeira, dict) else str(primeira)
-        partes.append(f"{nome} {verbo} pesquisador(a) com formação em {descr}.")
+    if nomes_areas:
+        area_str = " e ".join(nomes_areas)
+        frase1 = f"{nome} {verbo} pesquisador(a), com atuação principal em {area_str}."
     else:
-        partes.append(f"{nome} {verbo} pesquisador(a) e profissional acadêmico(a).")
+        frase1 = f"{nome} {verbo} pesquisador(a) e profissional acadêmico(a)."
 
-    # Atuação
+    # Frase 2: atuação ou formação principal
+    partes = [frase1]
     atuacao = dados.get("atuacao_profissional", [])
     if atuacao:
         primeira = atuacao[0]
         descr = primeira.get("descricao") if isinstance(primeira, dict) else str(primeira)
-        v = "Atuou" if status == "memorializado" else "Atua"
-        partes.append(f"{v} profissionalmente em {descr}.")
-
-    # Áreas
-    areas = dados.get("areas_atuacao", [])
-    if areas:
-        nomes_areas = []
-        for a in areas[:5]:
-            n = a.get("descricao") if isinstance(a, dict) else str(a)
-            if n:
-                nomes_areas.append(n)
-        if nomes_areas:
-            v = "tinha" if status == "memorializado" else "tem"
-            partes.append(f"{v.capitalize()} atuação nas áreas de {', '.join(nomes_areas)}.")
-
-    # Aviso honesto
-    partes.append(
-        "(Este texto foi montado automaticamente — recomenda-se editar "
-        "manualmente para um resumo mais elaborado.)"
-    )
+        # Pega apenas a primeira parte da descrição (instituição e cargo principal)
+        descr_curta = descr.split(",")[0].strip() if descr else ""
+        if descr_curta and len(descr_curta) < 200:
+            v = "Atuou" if status == "memorializado" else "Atua"
+            partes.append(f"{v} profissionalmente em {descr_curta}.")
 
     return " ".join(partes)
 
