@@ -40,3 +40,10 @@ PAGE_LOAD_TIMEOUT = 30  # Segundos para carregamento de página
 # ── Limites de prompt ────────────────────────────────
 MAX_PRODUCOES_NO_PROMPT = 50
 MAX_ITENS_POR_SECAO = 30
+
+# ── Escavador (alternativa ao Lattes via Playwright) ─
+# API que processa currículos Lattes e devolve JSON estruturado,
+# eliminando a necessidade de scraping com CAPTCHA.
+# Documentação: https://api.escavador.com/docs/
+# Como obter chave: https://api.escavador.com/
+ESCAVADOR_API_KEY = os.getenv("ESCAVADOR_API_KEY", "")

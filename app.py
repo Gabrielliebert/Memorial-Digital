@@ -28,7 +28,8 @@ from models import init_db, salvar_memorial, buscar_memorial, listar_memoriais, 
     adicionar_foto, listar_fotos, deletar_foto, atualizar_legenda_foto, \
     convidar_colaborador, listar_colaboradores, buscar_colaborador_por_token, \
     aceitar_convite, revogar_colaborador
-from modules.sources import coletar_lattes_completo
+from modules.sources import coletar_lattes_completo, processar_export_linkedin, \
+    coletar_escavador
 from modules.sources.manual import construir_dados_manuais, construir_dados_de_json
 from modules.generator import gerar_memorial, sugerir_tributos
 
@@ -159,6 +160,72 @@ def _salvar_foto_upload(arquivo) -> str | None:
     caminho = os.path.join(pasta, nome_unico)
     arquivo.save(caminho)
     return url_for("static", filename=f"uploads/{nome_unico}")
+
+
+@app.route("/gerar_linkedin", methods=["POST"])
+def gerar_linkedin():
+    """Inicia o pipeline a partir do ZIP exportado do LinkedIn."""
+    arquivo = request.files.get("linkedin_zip")
+    if not arquivo or not arquivo.filename:
+        flash("Envie o ZIP do export do LinkedIn.", "erro")
+        return redirect(url_for("criar"))
+
+    if not arquivo.filename.lower().endswith(".zip"):
+        flash("O arquivo deve ser um ZIP (.zip).", "erro")
+        return redirect(url_for("criar"))
+
+    memorial_status = request.form.get("memorial_status", "ativo")
+    data_nascimento = request.form.get("data_nascimento") or None
+    data_falecimento = request.form.get("data_falecimento") or None
+
+    try:
+        dados = processar_export_linkedin(arquivo)
+    except ValueError as e:
+        flash(f"Erro no ZIP: {e}", "erro")
+        return redirect(url_for("criar"))
+    except Exception as e:
+        print(f"[LinkedIn] ✗ {e}")
+        flash(f"Erro ao processar export: {e}", "erro")
+        return redirect(url_for("criar"))
+
+    return _iniciar_pipeline(
+        fonte="linkedin", origem="export_oficial",
+        dados_pre_coletados=dados,
+        memorial_status=memorial_status,
+        data_nascimento=data_nascimento,
+        data_falecimento=data_falecimento,
+    )
+
+
+@app.route("/gerar_escavador", methods=["POST"])
+def gerar_escavador():
+    """Inicia o pipeline a partir da API do Escavador (sem CAPTCHA)."""
+    query = (request.form.get("query") or "").strip()
+    if not query:
+        flash("Informe o nome ou ID Lattes para buscar no Escavador.", "erro")
+        return redirect(url_for("criar"))
+
+    memorial_status = request.form.get("memorial_status", "ativo")
+    data_nascimento = request.form.get("data_nascimento") or None
+    data_falecimento = request.form.get("data_falecimento") or None
+
+    try:
+        dados = coletar_escavador(query)
+    except ValueError as e:
+        flash(str(e), "erro")
+        return redirect(url_for("criar"))
+    except Exception as e:
+        print(f"[Escavador] ✗ {e}")
+        flash(f"Erro ao consultar Escavador: {e}", "erro")
+        return redirect(url_for("criar"))
+
+    return _iniciar_pipeline(
+        fonte="escavador", origem=query,
+        dados_pre_coletados=dados,
+        memorial_status=memorial_status,
+        data_nascimento=data_nascimento,
+        data_falecimento=data_falecimento,
+    )
 
 
 def _iniciar_pipeline(fonte: str, origem: str, dados_pre_coletados: dict = None,

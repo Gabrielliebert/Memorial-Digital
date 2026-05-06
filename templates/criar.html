@@ -11,13 +11,19 @@
         </p>
     </div>
 
-    <!-- Tabs entre Lattes e Manual -->
+    <!-- Tabs entre as 4 fontes -->
     <div class="tab-container">
         <button class="tab-btn active" onclick="trocarFonte('lattes')" id="tabBtnLattes">
-            🎓 Currículo Lattes
+            🎓 Lattes
+        </button>
+        <button class="tab-btn" onclick="trocarFonte('escavador')" id="tabBtnEscavador">
+            🔍 Escavador
+        </button>
+        <button class="tab-btn" onclick="trocarFonte('linkedin')" id="tabBtnLinkedin">
+            🔗 LinkedIn
         </button>
         <button class="tab-btn" onclick="trocarFonte('manual')" id="tabBtnManual">
-            ✍️ Entrada Manual
+            ✍️ Manual
         </button>
     </div>
 
@@ -78,6 +84,78 @@
         <div class="form-actions">
             <button type="submit" class="btn-gerar">
                 ✨ Gerar Memorial do Lattes
+            </button>
+        </div>
+    </form>
+
+    <!-- Fonte: Escavador ──────────────────────── -->
+    <form action="{{ url_for('gerar_escavador') }}" method="POST"
+          class="manual-form" id="formEscavador" style="display:none">
+        <input type="hidden" name="memorial_status" id="statusEscavador" value="ativo">
+        <input type="hidden" name="data_nascimento" id="nascEscavador">
+        <input type="hidden" name="data_falecimento" id="falEscavador">
+
+        <div class="form-group">
+            <label class="form-label">Nome ou ID do Currículo Lattes</label>
+            <div class="input-wrapper">
+                <span class="input-icon">🔍</span>
+                <input type="text" name="query" class="input-url"
+                       placeholder="Ex: Cristiano Maciel  ou  0123456789012345"
+                       required>
+            </div>
+            <p class="form-hint">
+                Mesma fonte do Lattes, mas via API do Escavador — sem CAPTCHA
+                e mais rápido. Requer chave da API configurada no
+                <code>.env</code> (<code>ESCAVADOR_API_KEY</code>).
+                Obtenha em <a href="https://api.escavador.com" target="_blank" rel="noopener">api.escavador.com</a>.
+            </p>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-gerar">
+                ✨ Buscar e gerar memorial
+            </button>
+        </div>
+    </form>
+
+    <!-- Fonte: LinkedIn ────────────────────────── -->
+    <form action="{{ url_for('gerar_linkedin') }}" method="POST"
+          class="manual-form" id="formLinkedin" style="display:none"
+          enctype="multipart/form-data">
+        <input type="hidden" name="memorial_status" id="statusLinkedin" value="ativo">
+        <input type="hidden" name="data_nascimento" id="nascLinkedin">
+        <input type="hidden" name="data_falecimento" id="falLinkedin">
+
+        <div class="config-section" style="background:var(--bg-secondary);border-style:dashed">
+            <h3 style="font-size:1rem;margin-bottom:0.75rem">📥 Como obter o ZIP do LinkedIn</h3>
+            <ol style="padding-left:1.5rem;color:var(--text-secondary);font-size:0.9rem;line-height:1.7">
+                <li>Acesse
+                    <a href="https://www.linkedin.com/mypreferences/d/download-my-data"
+                       target="_blank" rel="noopener">linkedin.com/mypreferences/d/download-my-data</a>
+                </li>
+                <li>Marque <strong>"Want something in particular?"</strong> e
+                    selecione: <em>Profile, Positions, Education, Skills,
+                    Languages, Honors, Publications, Projects</em></li>
+                <li>Clique em <strong>"Request archive"</strong></li>
+                <li>Aguarde o e-mail (pode levar de minutos a 24h)</li>
+                <li>Baixe o arquivo <code>.zip</code> e envie aqui</li>
+            </ol>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Arquivo ZIP do export</label>
+            <input type="file" name="linkedin_zip" class="form-input"
+                   accept=".zip" required>
+            <p class="form-hint">
+                O ZIP é processado localmente — nenhum dado é enviado a
+                servidores externos. Caminho mais alinhado ao princípio de
+                volição: o titular controla integralmente o que entra.
+            </p>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-gerar">
+                ✨ Processar ZIP e gerar memorial
             </button>
         </div>
     </form>
@@ -170,28 +248,39 @@
 
 {% block scripts %}
 <script>
+const FONTES = ['lattes', 'escavador', 'linkedin', 'manual'];
+
 function trocarFonte(qual) {
-    document.getElementById('formLattes').style.display = qual === 'lattes' ? '' : 'none';
-    document.getElementById('formManual').style.display = qual === 'manual' ? '' : 'none';
-    document.getElementById('tabBtnLattes').classList.toggle('active', qual === 'lattes');
-    document.getElementById('tabBtnManual').classList.toggle('active', qual === 'manual');
+    FONTES.forEach(f => {
+        const cap = f.charAt(0).toUpperCase() + f.slice(1);
+        const form = document.getElementById('form' + cap);
+        const btn = document.getElementById('tabBtn' + cap);
+        if (form) form.style.display = (f === qual) ? '' : 'none';
+        if (btn) btn.classList.toggle('active', f === qual);
+    });
 }
 
 function sincronizarStatus(valor) {
-    document.getElementById('statusLattes').value = valor;
-    document.getElementById('statusManual').value = valor;
+    FONTES.forEach(f => {
+        const cap = f.charAt(0).toUpperCase() + f.slice(1);
+        const inp = document.getElementById('status' + cap);
+        if (inp) inp.value = valor;
+    });
     document.getElementById('datasSection').style.display =
         valor === 'memorializado' ? '' : 'none';
 }
 
-// Sincroniza datas
+// Sincroniza datas para todas as fontes
 ['Nascimento', 'Falecimento'].forEach(campo => {
     const input = document.getElementById('data' + campo);
     if (!input) return;
     input.addEventListener('change', () => {
-        const target = campo === 'Nascimento' ? 'nasc' : 'fal';
-        document.getElementById(target + 'Lattes').value = input.value;
-        document.getElementById(target + 'Manual').value = input.value;
+        const prefixo = campo === 'Nascimento' ? 'nasc' : 'fal';
+        FONTES.forEach(f => {
+            const cap = f.charAt(0).toUpperCase() + f.slice(1);
+            const target = document.getElementById(prefixo + cap);
+            if (target) target.value = input.value;
+        });
     });
 });
 </script>
