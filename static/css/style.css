@@ -2410,6 +2410,132 @@ a:hover { color: var(--accent-secondary); }
     .lightbox-next { right: 0.5rem; }
 }
 
+/* ═══════════════════════════════════════════════════
+   Colaboradores e link mágico
+   ═══════════════════════════════════════════════════ */
+.link-magico {
+    background: linear-gradient(135deg, var(--accent-soft), transparent);
+    border: 2px solid var(--accent-primary);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    margin-bottom: 2rem;
+    animation: linkMagicoIn 0.4s ease;
+}
+
+@keyframes linkMagicoIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.link-magico-header {
+    color: var(--accent-primary);
+    font-size: 1.05rem;
+    margin-bottom: 0.5rem;
+}
+
+.link-magico-help {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.85rem;
+    line-height: 1.6;
+}
+
+.link-magico-box {
+    display: flex;
+    gap: 0.5rem;
+    align-items: stretch;
+}
+
+.link-magico-box input {
+    flex: 1;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 0.78rem;
+    background: var(--bg-secondary);
+}
+
+.link-magico-box .btn-gerar {
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+}
+
+.link-revisitar {
+    margin-top: 0.5rem;
+}
+
+.link-revisitar summary {
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    list-style: none;
+}
+
+.link-revisitar summary::-webkit-details-marker { display: none; }
+
+.link-revisitar summary:hover {
+    color: var(--accent-primary);
+}
+
+.colaboradores-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    margin-top: 1rem;
+}
+
+.colaborador-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+}
+
+.colaborador-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.colaborador-nome {
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.colaborador-papel {
+    background: var(--accent-soft);
+    color: var(--accent-primary);
+    border-radius: 4px;
+    padding: 0.1rem 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.colaborador-meta {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    margin: 0.25rem 0 0;
+}
+
+/* Alerta de boas-vindas para colaborador */
+.alert-convite {
+    max-width: 720px;
+    margin: 0 auto 1rem;
+    padding: 0.85rem 1.25rem;
+    background: rgba(74, 222, 128, 0.1);
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    border-radius: var(--radius-md);
+    color: var(--color-success);
+    font-size: 0.92rem;
+    text-align: center;
+}
+
 /* Accordions: progressive disclosure (Maciel et al., 2019) */
 .memorial-explorar {
     max-width: 800px;

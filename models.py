@@ -64,6 +64,19 @@ def init_db():
             criado_em TEXT DEFAULT (datetime('now', 'localtime')),
             FOREIGN KEY (memorial_id) REFERENCES memoriais(id) ON DELETE CASCADE
         );
+
+        CREATE TABLE IF NOT EXISTS colaboradores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            memorial_id INTEGER NOT NULL,
+            nome TEXT,
+            email TEXT NOT NULL,
+            papel TEXT NOT NULL DEFAULT 'colaborador',
+            token TEXT UNIQUE NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pendente',
+            criado_em TEXT DEFAULT (datetime('now', 'localtime')),
+            aceito_em TEXT,
+            FOREIGN KEY (memorial_id) REFERENCES memoriais(id) ON DELETE CASCADE
+        );
     """)
 
     # Migração: adicionar colunas novas se ainda não existirem.
@@ -335,6 +348,95 @@ def atualizar_legenda_foto(foto_id: int, legenda: str) -> bool:
     result = conn.execute(
         "UPDATE fotos SET legenda = ? WHERE id = ?",
         ((legenda or "").strip()[:200], foto_id),
+    )
+    conn.commit()
+    conn.close()
+    return result.rowcount > 0
+
+
+# ── Colaboradores (revisão colaborativa) ──────────────
+# Embasamento: plano de trabalho 2025/2026 — "painel de revisão
+# colaborativa que permitirá a familiares validar ou ajustar cada
+# homenagem". Verhalen et al. (2021) — design participativo.
+# Brubaker, Hayes & Dourish (2013) — papéis em memoriais digitais.
+
+import secrets
+
+
+def convidar_colaborador(memorial_id: int, email: str, papel: str = "colaborador",
+                         nome: str = "") -> tuple[int, str]:
+    """
+    Cria um convite para colaborador. Gera token único.
+
+    Args:
+        memorial_id: ID do memorial.
+        email: e-mail do convidado.
+        papel: 'colaborador' (pode propor edições) ou 'moderador'
+               (pode aprovar/editar diretamente).
+        nome: nome opcional do convidado.
+
+    Returns:
+        (colaborador_id, token) — usar token na URL /colaborar/<token>
+    """
+    if papel not in ("colaborador", "moderador"):
+        papel = "colaborador"
+    token = secrets.token_urlsafe(24)
+    conn = get_db()
+    cursor = conn.execute(
+        """INSERT INTO colaboradores
+           (memorial_id, nome, email, papel, token, status)
+           VALUES (?, ?, ?, ?, ?, 'pendente')""",
+        (memorial_id, (nome or "").strip()[:80],
+         email.strip().lower()[:120], papel, token),
+    )
+    colaborador_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return colaborador_id, token
+
+
+def listar_colaboradores(memorial_id: int) -> list:
+    """Lista todos os colaboradores de um memorial."""
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT * FROM colaboradores WHERE memorial_id = ? ORDER BY criado_em DESC",
+        (memorial_id,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def buscar_colaborador_por_token(token: str) -> dict | None:
+    """Busca colaborador pelo token (validação de acesso)."""
+    if not token:
+        return None
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM colaboradores WHERE token = ?", (token,),
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def aceitar_convite(token: str) -> bool:
+    """Marca convite como aceito (primeiro acesso)."""
+    conn = get_db()
+    result = conn.execute(
+        """UPDATE colaboradores
+           SET status = 'aceito', aceito_em = datetime('now', 'localtime')
+           WHERE token = ? AND status = 'pendente'""",
+        (token,),
+    )
+    conn.commit()
+    conn.close()
+    return result.rowcount > 0
+
+
+def revogar_colaborador(colaborador_id: int) -> bool:
+    """Remove um colaborador (revoga o acesso)."""
+    conn = get_db()
+    result = conn.execute(
+        "DELETE FROM colaboradores WHERE id = ?", (colaborador_id,),
     )
     conn.commit()
     conn.close()

@@ -81,6 +81,15 @@
         </div>
         {% endif %}
 
+        {# ── Convite aceito (acesso por token de colaborador) ── #}
+        {% if colaborador %}
+        <div class="alert-convite">
+            👋 Olá <strong>{{ colaborador.nome or colaborador.email }}</strong>!
+            Você está acessando este memorial como
+            <strong>{{ colaborador.papel }}</strong>.
+        </div>
+        {% endif %}
+
         {# ── Ações públicas (visitante) — discretas, abaixo do resumo ── #}
         <div class="acoes-visitante">
             <button class="btn-mini" onclick="compartilhar()" title="Compartilhar este memorial">
@@ -127,6 +136,10 @@
                    class="btn-mod" title="Gerenciar galeria de fotos">
                     🖼️ Galeria
                     {% if fotos %}<span class="badge-pendentes" style="background:var(--accent-primary);color:white">{{ fotos|length }}</span>{% endif %}
+                </a>
+                <a href="{{ url_for('colaboradores_memorial', memorial_id=memorial.id) }}"
+                   class="btn-mod" title="Convidar colaboradores">
+                    👥 Colaboradores
                 </a>
                 <a href="{{ url_for('moderar_tributos', memorial_id=memorial.id) }}"
                    class="btn-mod" title="Moderar mensagens">

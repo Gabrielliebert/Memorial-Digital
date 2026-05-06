@@ -25,7 +25,9 @@ from models import init_db, salvar_memorial, buscar_memorial, listar_memoriais, 
     atualizar_memorial, deletar_memorial, buscar_memoriais_por_nome, \
     atualizar_configuracao_memorial, adicionar_tributo, listar_tributos, \
     moderar_tributo, deletar_tributo, contar_tributos_pendentes, \
-    adicionar_foto, listar_fotos, deletar_foto, atualizar_legenda_foto
+    adicionar_foto, listar_fotos, deletar_foto, atualizar_legenda_foto, \
+    convidar_colaborador, listar_colaboradores, buscar_colaborador_por_token, \
+    aceitar_convite, revogar_colaborador
 from modules.sources import coletar_lattes_completo
 from modules.sources.manual import construir_dados_manuais, construir_dados_de_json
 from modules.generator import gerar_memorial, sugerir_tributos
@@ -219,16 +221,32 @@ def ver_memorial(memorial_id):
             return redirect(url_for("index"))
 
     # Modo moderador: ?mod=1 ativa ferramentas de edição/configuração
+    # OU acesso por token de colaborador (?col=<token>)
     # Embasamento: separação entre visualização e curadoria
     # (Trevisan et al., 2021; Verhalen et al., 2021).
+    # Brubaker et al. (2013) — papéis em memoriais.
     is_moderador = request.args.get("mod") == "1"
+    col_token = request.args.get("col", "")
+    colaborador = None
+    if col_token:
+        colaborador = buscar_colaborador_por_token(col_token)
+        # Token só vale para o memorial certo
+        if colaborador and colaborador["memorial_id"] == memorial_id:
+            if colaborador["status"] == "pendente":
+                aceitar_convite(col_token)
+            # Colaborador com papel "moderador" tem acesso completo
+            if colaborador["papel"] == "moderador":
+                is_moderador = True
+        else:
+            colaborador = None
 
     tributos = listar_tributos(memorial_id, apenas_aprovados=True)
     pendentes = contar_tributos_pendentes(memorial_id) if is_moderador else 0
     fotos = listar_fotos(memorial_id)
     return render_template("memorial.html", memorial=memorial,
                            tributos=tributos, is_moderador=is_moderador,
-                           tributos_pendentes=pendentes, fotos=fotos)
+                           tributos_pendentes=pendentes, fotos=fotos,
+                           colaborador=colaborador)
 
 
 @app.route("/memorial/<int:memorial_id>/configurar", methods=["GET", "POST"])
@@ -253,6 +271,60 @@ def configurar_memorial(memorial_id):
         return redirect(url_for("configurar_memorial", memorial_id=memorial_id))
 
     return render_template("configurar.html", memorial=memorial)
+
+
+@app.route("/memorial/<int:memorial_id>/colaboradores", methods=["GET", "POST"])
+def colaboradores_memorial(memorial_id):
+    """
+    Página de gestão de colaboradores.
+    Embasamento: plano de trabalho — painel de revisão colaborativa que
+    permite a familiares validar/ajustar homenagens. Verhalen et al. (2021)
+    sobre design participativo. Brubaker et al. (2013) sobre papéis.
+    """
+    memorial = buscar_memorial(memorial_id)
+    if not memorial:
+        flash("Memorial não encontrado.", "erro")
+        return redirect(url_for("index"))
+
+    if request.method == "POST":
+        nome = (request.form.get("nome") or "").strip()
+        email = (request.form.get("email") or "").strip()
+        papel = request.form.get("papel", "colaborador")
+
+        if not email or "@" not in email:
+            flash("Informe um e-mail válido.", "erro")
+            return redirect(url_for("colaboradores_memorial",
+                                    memorial_id=memorial_id))
+
+        _id, token = convidar_colaborador(memorial_id, email, papel, nome)
+        # Constrói o link mágico — o usuário copia e envia manualmente
+        link = url_for("ver_memorial", memorial_id=memorial_id,
+                       col=token, _external=True)
+        flash(
+            f"✓ Convite criado para {email}. "
+            f"Copie o link abaixo e envie a essa pessoa.",
+            "sucesso"
+        )
+        # Passa o link via query para mostrar destacado
+        return redirect(url_for("colaboradores_memorial",
+                                memorial_id=memorial_id,
+                                novo_link=link, novo_email=email))
+
+    colaboradores = listar_colaboradores(memorial_id)
+    novo_link = request.args.get("novo_link")
+    novo_email = request.args.get("novo_email")
+    return render_template("colaboradores.html", memorial=memorial,
+                           colaboradores=colaboradores,
+                           novo_link=novo_link, novo_email=novo_email)
+
+
+@app.route("/colaborador/<int:colaborador_id>/revogar", methods=["POST"])
+def revogar_colaborador_route(colaborador_id):
+    """Revoga acesso de um colaborador."""
+    memorial_id = int(request.form.get("memorial_id", 0))
+    if revogar_colaborador(colaborador_id):
+        flash("Acesso revogado.", "info")
+    return redirect(url_for("colaboradores_memorial", memorial_id=memorial_id))
 
 
 @app.route("/memorial/<int:memorial_id>/galeria", methods=["GET", "POST"])

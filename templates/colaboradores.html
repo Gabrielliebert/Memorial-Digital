@@ -1,0 +1,157 @@
+{#
+  Painel de revisão colaborativa — embasamento:
+  plano de trabalho 2025/2026 (revisão colaborativa);
+  Verhalen et al. (2021) — design participativo;
+  Brubaker et al. (2013) — papéis em memoriais.
+#}
+{% extends "base.html" %}
+{% block title %}Colaboradores — {{ memorial.nome }}{% endblock %}
+
+{% block content %}
+<div class="page-container" style="max-width:850px">
+    <div class="page-header">
+        <a href="{{ url_for('ver_memorial', memorial_id=memorial.id, mod=1) }}" class="back-link">
+            ← Voltar ao memorial
+        </a>
+        <h1 class="page-title">Colaboradores</h1>
+        <p class="page-subtitle">
+            Convide familiares ou colegas para colaborar com o memorial de
+            <strong>{{ memorial.nome }}</strong>. Eles recebem um link de acesso
+            sem precisar criar conta.
+        </p>
+    </div>
+
+    {# Link recém-criado em destaque #}
+    {% if novo_link %}
+    <div class="link-magico">
+        <div class="link-magico-header">
+            <strong>🎉 Link de acesso criado</strong> para <em>{{ novo_email }}</em>
+        </div>
+        <p class="link-magico-help">
+            Copie o link abaixo e envie por e-mail, WhatsApp ou outro canal.
+            Quem abrir terá acesso conforme o papel definido.
+        </p>
+        <div class="link-magico-box">
+            <input type="text" id="linkMagico" value="{{ novo_link }}" readonly
+                   onclick="this.select()" class="form-input">
+            <button onclick="copiarLink()" class="btn-gerar">📋 Copiar</button>
+        </div>
+    </div>
+    {% endif %}
+
+    {# Form de convite #}
+    <div class="config-section">
+        <h2 class="config-section-title">➕ Convidar nova pessoa</h2>
+        <p class="config-section-desc">
+            O convite é um link único — nenhuma senha, nenhum cadastro.
+            Quem tem o link pode acessar com o papel atribuído.
+        </p>
+
+        <form action="{{ url_for('colaboradores_memorial', memorial_id=memorial.id) }}"
+              method="POST" class="manual-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Nome (opcional)</label>
+                    <input type="text" name="nome" class="form-input"
+                           placeholder="Ex: Maria Silva" maxlength="80">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">E-mail *</label>
+                    <input type="email" name="email" class="form-input"
+                           placeholder="email@exemplo.com" required maxlength="120">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Papel</label>
+                <div class="radio-group">
+                    <label class="radio-card">
+                        <input type="radio" name="papel" value="colaborador" checked>
+                        <div>
+                            <strong>Colaborador</strong>
+                            <span>Pode visualizar e enviar tributos sem moderação</span>
+                        </div>
+                    </label>
+                    <label class="radio-card">
+                        <input type="radio" name="papel" value="moderador">
+                        <div>
+                            <strong>Moderador</strong>
+                            <span>Acesso completo: editar, configurar, moderar</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-gerar">
+                    ✉️ Criar link de convite
+                </button>
+            </div>
+        </form>
+    </div>
+
+    {# Lista de colaboradores existentes #}
+    {% if colaboradores %}
+    <h2 class="config-section-title" style="margin-top:2rem">
+        👥 Pessoas com acesso ({{ colaboradores|length }})
+    </h2>
+
+    <div class="colaboradores-lista">
+        {% for c in colaboradores %}
+        <div class="colaborador-card">
+            <div class="colaborador-info">
+                <div class="colaborador-nome">
+                    {% if c.papel == 'moderador' %}🛡️{% else %}👤{% endif %}
+                    <strong>{{ c.nome or c.email }}</strong>
+                    <span class="colaborador-papel">{{ c.papel }}</span>
+                </div>
+                <p class="colaborador-meta">
+                    📧 {{ c.email }} ·
+                    {% if c.status == 'aceito' %}
+                    ✓ Aceitou em {{ c.aceito_em[:10] }}
+                    {% else %}
+                    ⏳ Aguardando primeiro acesso
+                    {% endif %}
+                </p>
+                <details class="link-revisitar">
+                    <summary>Ver link de acesso</summary>
+                    <div class="link-magico-box" style="margin-top:0.5rem">
+                        <input type="text" readonly
+                               value="{{ url_for('ver_memorial', memorial_id=memorial.id, col=c.token, _external=True) }}"
+                               class="form-input"
+                               onclick="this.select()">
+                    </div>
+                </details>
+            </div>
+
+            <form action="{{ url_for('revogar_colaborador_route', colaborador_id=c.id) }}"
+                  method="POST" class="inline-form"
+                  onsubmit="return confirm('Revogar o acesso de {{ c.nome or c.email }}?')">
+                <input type="hidden" name="memorial_id" value="{{ memorial.id }}">
+                <button type="submit" class="btn-mini btn-mini-danger" title="Revogar acesso">
+                    🗑️ Revogar
+                </button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copiarLink() {
+    const inp = document.getElementById('linkMagico');
+    inp.select();
+    navigator.clipboard.writeText(inp.value).then(() => {
+        // Toast simples
+        const t = document.createElement('div');
+        t.textContent = '✓ Link copiado!';
+        t.style.cssText = 'position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:var(--accent-primary);color:white;padding:0.75rem 1.5rem;border-radius:8px;z-index:300;font-size:0.9rem';
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 2000);
+    });
+}
+</script>
+{% endblock %}
