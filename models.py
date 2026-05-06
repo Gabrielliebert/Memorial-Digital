@@ -54,6 +54,16 @@ def init_db():
             criado_em TEXT DEFAULT (datetime('now', 'localtime')),
             FOREIGN KEY (memorial_id) REFERENCES memoriais(id) ON DELETE CASCADE
         );
+
+        CREATE TABLE IF NOT EXISTS fotos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            memorial_id INTEGER NOT NULL,
+            foto_url TEXT NOT NULL,
+            legenda TEXT,
+            ordem INTEGER DEFAULT 0,
+            criado_em TEXT DEFAULT (datetime('now', 'localtime')),
+            FOREIGN KEY (memorial_id) REFERENCES memoriais(id) ON DELETE CASCADE
+        );
     """)
 
     # Migração: adicionar colunas novas se ainda não existirem.
@@ -269,6 +279,63 @@ def deletar_tributo(tributo_id: int) -> bool:
     """Remove um tributo."""
     conn = get_db()
     result = conn.execute("DELETE FROM tributos WHERE id = ?", (tributo_id,))
+    conn.commit()
+    conn.close()
+    return result.rowcount > 0
+
+
+# ── Galeria de fotos ───────────────────────────────────
+# Embasamento: plano de trabalho 2025/2026 — "coleta multimodal
+# (texto e imagem)". Walter (2015) — luto contemporâneo é multimídia.
+
+def adicionar_foto(memorial_id: int, foto_url: str, legenda: str = "") -> int:
+    """Adiciona uma foto à galeria do memorial."""
+    conn = get_db()
+    # Pega a maior ordem atual + 1
+    row = conn.execute(
+        "SELECT COALESCE(MAX(ordem), 0) + 1 as proxima FROM fotos WHERE memorial_id = ?",
+        (memorial_id,),
+    ).fetchone()
+    proxima = row["proxima"] if row else 1
+
+    cursor = conn.execute(
+        """INSERT INTO fotos (memorial_id, foto_url, legenda, ordem)
+           VALUES (?, ?, ?, ?)""",
+        (memorial_id, foto_url, (legenda or "").strip()[:200], proxima),
+    )
+    foto_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return foto_id
+
+
+def listar_fotos(memorial_id: int) -> list:
+    """Lista todas as fotos da galeria, em ordem."""
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT * FROM fotos WHERE memorial_id = ? ORDER BY ordem ASC, criado_em ASC",
+        (memorial_id,),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def deletar_foto(foto_id: int) -> bool:
+    """Remove uma foto da galeria."""
+    conn = get_db()
+    result = conn.execute("DELETE FROM fotos WHERE id = ?", (foto_id,))
+    conn.commit()
+    conn.close()
+    return result.rowcount > 0
+
+
+def atualizar_legenda_foto(foto_id: int, legenda: str) -> bool:
+    """Atualiza a legenda de uma foto."""
+    conn = get_db()
+    result = conn.execute(
+        "UPDATE fotos SET legenda = ? WHERE id = ?",
+        ((legenda or "").strip()[:200], foto_id),
+    )
     conn.commit()
     conn.close()
     return result.rowcount > 0

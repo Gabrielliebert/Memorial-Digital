@@ -24,7 +24,8 @@ import config
 from models import init_db, salvar_memorial, buscar_memorial, listar_memoriais, \
     atualizar_memorial, deletar_memorial, buscar_memoriais_por_nome, \
     atualizar_configuracao_memorial, adicionar_tributo, listar_tributos, \
-    moderar_tributo, deletar_tributo, contar_tributos_pendentes
+    moderar_tributo, deletar_tributo, contar_tributos_pendentes, \
+    adicionar_foto, listar_fotos, deletar_foto, atualizar_legenda_foto
 from modules.sources import coletar_lattes_completo
 from modules.sources.manual import construir_dados_manuais, construir_dados_de_json
 from modules.generator import gerar_memorial, sugerir_tributos
@@ -224,9 +225,10 @@ def ver_memorial(memorial_id):
 
     tributos = listar_tributos(memorial_id, apenas_aprovados=True)
     pendentes = contar_tributos_pendentes(memorial_id) if is_moderador else 0
+    fotos = listar_fotos(memorial_id)
     return render_template("memorial.html", memorial=memorial,
                            tributos=tributos, is_moderador=is_moderador,
-                           tributos_pendentes=pendentes)
+                           tributos_pendentes=pendentes, fotos=fotos)
 
 
 @app.route("/memorial/<int:memorial_id>/configurar", methods=["GET", "POST"])
@@ -251,6 +253,58 @@ def configurar_memorial(memorial_id):
         return redirect(url_for("configurar_memorial", memorial_id=memorial_id))
 
     return render_template("configurar.html", memorial=memorial)
+
+
+@app.route("/memorial/<int:memorial_id>/galeria", methods=["GET", "POST"])
+def galeria_memorial(memorial_id):
+    """
+    Página de gestão da galeria de fotos.
+    Embasamento: plano de trabalho — coleta multimodal (texto + imagem).
+    Walter (2015) — luto contemporâneo é multimídia.
+    """
+    memorial = buscar_memorial(memorial_id)
+    if not memorial:
+        flash("Memorial não encontrado.", "erro")
+        return redirect(url_for("index"))
+
+    if request.method == "POST":
+        # Upload de uma ou múltiplas fotos
+        arquivos = request.files.getlist("fotos")
+        legenda_default = (request.form.get("legenda") or "").strip()
+        adicionadas = 0
+        for arq in arquivos:
+            if arq and arq.filename:
+                url = _salvar_foto_upload(arq)
+                if url:
+                    adicionar_foto(memorial_id, url, legenda_default)
+                    adicionadas += 1
+        if adicionadas:
+            flash(f"{adicionadas} foto(s) adicionada(s) à galeria.", "sucesso")
+        else:
+            flash("Nenhuma foto válida enviada (use jpg/png/webp/gif).", "erro")
+        return redirect(url_for("galeria_memorial", memorial_id=memorial_id))
+
+    fotos = listar_fotos(memorial_id)
+    return render_template("galeria.html", memorial=memorial, fotos=fotos)
+
+
+@app.route("/foto/<int:foto_id>/deletar", methods=["POST"])
+def remover_foto(foto_id):
+    """Remove uma foto da galeria."""
+    memorial_id = int(request.form.get("memorial_id", 0))
+    if deletar_foto(foto_id):
+        flash("Foto removida.", "info")
+    return redirect(url_for("galeria_memorial", memorial_id=memorial_id))
+
+
+@app.route("/foto/<int:foto_id>/legenda", methods=["POST"])
+def editar_legenda_foto(foto_id):
+    """Atualiza a legenda de uma foto."""
+    memorial_id = int(request.form.get("memorial_id", 0))
+    legenda = request.form.get("legenda", "")
+    if atualizar_legenda_foto(foto_id, legenda):
+        flash("Legenda atualizada.", "sucesso")
+    return redirect(url_for("galeria_memorial", memorial_id=memorial_id))
 
 
 @app.route("/memorial/<int:memorial_id>/sugerir-tributos", methods=["POST"])

@@ -123,6 +123,11 @@
                 </form>
                 <a href="{{ url_for('configurar_memorial', memorial_id=memorial.id) }}"
                    class="btn-mod" title="Configurar privacidade">⚙️ Configurar</a>
+                <a href="{{ url_for('galeria_memorial', memorial_id=memorial.id) }}"
+                   class="btn-mod" title="Gerenciar galeria de fotos">
+                    🖼️ Galeria
+                    {% if fotos %}<span class="badge-pendentes" style="background:var(--accent-primary);color:white">{{ fotos|length }}</span>{% endif %}
+                </a>
                 <a href="{{ url_for('moderar_tributos', memorial_id=memorial.id) }}"
                    class="btn-mod" title="Moderar mensagens">
                     💬 Mensagens
@@ -138,6 +143,35 @@
                 <a href="{{ url_for('ver_memorial', memorial_id=memorial.id) }}"
                    class="btn-mod" title="Voltar à visualização normal">👁️ Sair</a>
             </div>
+        </div>
+        {% endif %}
+
+        {# ── Galeria de fotos (Walter, 2015: luto multimídia;
+             plano de trabalho — coleta multimodal) ── #}
+        {% if fotos %}
+        <div class="memorial-galeria">
+            <h2 class="explorar-titulo">📸 Galeria</h2>
+            <div class="galeria-grid">
+                {% for f in fotos %}
+                <figure class="galeria-item" onclick="abrirLightbox({{ loop.index0 }})">
+                    <img src="{{ f.foto_url }}" alt="{{ f.legenda or memorial.nome }}"
+                         loading="lazy"
+                         onerror="this.parentElement.style.display='none'">
+                    {% if f.legenda %}
+                    <figcaption class="galeria-legenda">{{ f.legenda }}</figcaption>
+                    {% endif %}
+                </figure>
+                {% endfor %}
+            </div>
+        </div>
+
+        {# Lightbox simples #}
+        <div class="lightbox" id="lightbox" onclick="fecharLightbox()">
+            <span class="lightbox-close">✕</span>
+            <button class="lightbox-nav lightbox-prev" onclick="event.stopPropagation();navegarLightbox(-1)">‹</button>
+            <img class="lightbox-img" id="lightboxImg" alt="" onclick="event.stopPropagation()">
+            <button class="lightbox-nav lightbox-next" onclick="event.stopPropagation();navegarLightbox(1)">›</button>
+            <div class="lightbox-legenda" id="lightboxLegenda"></div>
         </div>
         {% endif %}
 
@@ -310,6 +344,46 @@ function compartilhar() {
             .catch(() => mostrarToast('Copie o link na barra do navegador.'));
     }
 }
+
+// ── Lightbox da galeria ────────────────────────────────────────────
+const fotosGaleria = [
+    {% for f in fotos %}
+    { url: "{{ f.foto_url|e }}", legenda: "{{ (f.legenda or '')|e }}" }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+let lightboxIdx = 0;
+
+function abrirLightbox(idx) {
+    if (!fotosGaleria.length) return;
+    lightboxIdx = idx;
+    const lb = document.getElementById('lightbox');
+    const img = document.getElementById('lightboxImg');
+    const leg = document.getElementById('lightboxLegenda');
+    img.src = fotosGaleria[idx].url;
+    leg.textContent = fotosGaleria[idx].legenda;
+    leg.style.display = fotosGaleria[idx].legenda ? 'block' : 'none';
+    lb.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function fecharLightbox() {
+    document.getElementById('lightbox').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+function navegarLightbox(delta) {
+    if (!fotosGaleria.length) return;
+    lightboxIdx = (lightboxIdx + delta + fotosGaleria.length) % fotosGaleria.length;
+    abrirLightbox(lightboxIdx);
+}
+
+// Setas do teclado
+document.addEventListener('keydown', (e) => {
+    if (document.getElementById('lightbox')?.style.display !== 'flex') return;
+    if (e.key === 'Escape') fecharLightbox();
+    if (e.key === 'ArrowLeft') navegarLightbox(-1);
+    if (e.key === 'ArrowRight') navegarLightbox(1);
+});
 
 // ── Sugestão assistida de tributos via IA ─────────────────────────
 const btnSugerir = document.getElementById('btnSugerir');

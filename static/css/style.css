@@ -2209,6 +2209,207 @@ a:hover { color: var(--accent-secondary); }
     transform: translateX(2px);
 }
 
+/* ═══════════════════════════════════════════════════
+   Galeria de fotos (memorial e edição)
+   ═══════════════════════════════════════════════════ */
+.memorial-galeria {
+    max-width: 800px;
+    margin: 2.5rem auto 3rem;
+    padding: 0 2rem;
+}
+
+.galeria-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 0.85rem;
+    margin-top: 1.5rem;
+}
+
+.galeria-item {
+    position: relative;
+    margin: 0;
+    aspect-ratio: 1;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--bg-card);
+    transition: transform var(--transition-fast);
+}
+
+.galeria-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.galeria-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.3s ease;
+}
+
+.galeria-item:hover img {
+    transform: scale(1.05);
+}
+
+.galeria-legenda {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 0.55rem 0.75rem;
+    background: linear-gradient(transparent, rgba(0,0,0,0.85));
+    color: white;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    text-align: left;
+}
+
+/* Galeria de edição (página /galeria) */
+.galeria-grid-edicao {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+}
+
+.galeria-item-edit {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.galeria-item-edit img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    display: block;
+}
+
+.galeria-legenda-form {
+    display: flex;
+    gap: 0.4rem;
+    padding: 0.6rem;
+    border-top: 1px solid var(--border-subtle);
+}
+
+.galeria-legenda-form input {
+    flex: 1;
+    font-size: 0.82rem;
+    padding: 0.45rem 0.6rem;
+}
+
+.galeria-delete {
+    padding: 0 0.6rem 0.6rem 0.6rem;
+    margin-top: -0.3rem;
+}
+
+.galeria-delete .btn-mini {
+    width: 100%;
+}
+
+.btn-mini-danger {
+    color: var(--color-error);
+    border-color: rgba(248, 113, 113, 0.3);
+}
+
+.btn-mini-danger:hover {
+    background: rgba(248, 113, 113, 0.1);
+    border-color: rgba(248, 113, 113, 0.5);
+    color: var(--color-error);
+}
+
+/* Lightbox */
+.lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.92);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.lightbox-img {
+    max-width: 90vw;
+    max-height: 85vh;
+    object-fit: contain;
+    border-radius: var(--radius-md);
+    box-shadow: 0 0 60px rgba(139, 124, 245, 0.2);
+    cursor: default;
+}
+
+.lightbox-close {
+    position: absolute;
+    top: 1.5rem;
+    right: 2rem;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+    background: rgba(0,0,0,0.4);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--transition-fast);
+}
+
+.lightbox-close:hover {
+    background: rgba(248, 113, 113, 0.4);
+}
+
+.lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0,0,0,0.4);
+    border: none;
+    color: white;
+    font-size: 2.5rem;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.lightbox-nav:hover {
+    background: var(--accent-primary);
+}
+
+.lightbox-prev { left: 1.5rem; }
+.lightbox-next { right: 1.5rem; }
+
+.lightbox-legenda {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    background: rgba(0,0,0,0.7);
+    padding: 0.6rem 1.25rem;
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    max-width: 80vw;
+    text-align: center;
+}
+
+@media (max-width: 640px) {
+    .lightbox-nav { width: 44px; height: 44px; font-size: 1.8rem; }
+    .lightbox-prev { left: 0.5rem; }
+    .lightbox-next { right: 0.5rem; }
+}
+
 /* Accordions: progressive disclosure (Maciel et al., 2019) */
 .memorial-explorar {
     max-width: 800px;
