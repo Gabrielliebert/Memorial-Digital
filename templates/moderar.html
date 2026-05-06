@@ -4,12 +4,14 @@
 {% block content %}
 <div class="page-container">
     <div class="page-header">
-        <a href="{{ url_for('configurar_memorial', memorial_id=memorial.id) }}" class="back-link">
-            ← Voltar à configuração
+        <a href="{{ url_for('painel_memorial', memorial_id=memorial.id) }}" class="back-link">
+            ← Voltar ao painel
         </a>
-        <h1 class="page-title">Moderação de Tributos</h1>
+        <h1 class="page-title">Moderação de tributos</h1>
         <p class="page-subtitle">
-            Memorial de <strong>{{ memorial.nome }}</strong> · {{ tributos|length }} tributo(s)
+            Memorial de <strong>{{ memorial.nome }}</strong> · {{ tributos|length }} tributo(s).
+            Aprove os que devem aparecer publicamente, rejeite os inadequados
+            ou remova-os definitivamente.
         </p>
     </div>
 

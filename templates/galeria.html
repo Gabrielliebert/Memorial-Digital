@@ -9,13 +9,15 @@
 {% block content %}
 <div class="page-container" style="max-width:900px">
     <div class="page-header">
-        <a href="{{ url_for('ver_memorial', memorial_id=memorial.id, mod=1) }}" class="back-link">
-            ← Voltar ao memorial
+        <a href="{{ url_for('painel_memorial', memorial_id=memorial.id) }}" class="back-link">
+            ← Voltar ao painel
         </a>
         <h1 class="page-title">Galeria de fotos</h1>
         <p class="page-subtitle">
-            Memorial de <strong>{{ memorial.nome }}</strong> ·
-            {{ fotos|length }} foto(s)
+            Adicione fotos que ajudem a contar a trajetória de
+            <strong>{{ memorial.nome }}</strong> — momentos marcantes, eventos
+            profissionais ou registros pessoais. As fotos aparecem em
+            destaque no memorial. ({{ fotos|length }} foto(s) nesta galeria)
         </p>
     </div>
 
@@ -23,8 +25,8 @@
     <div class="config-section">
         <h2 class="config-section-title">📸 Adicionar fotos</h2>
         <p class="config-section-desc">
-            Envie uma ou mais fotos (JPG, PNG, WebP ou GIF). A legenda é
-            opcional e pode ser editada depois.
+            Formatos aceitos: <strong>JPG, PNG, WebP ou GIF</strong>.
+            Você pode enviar várias de uma vez (segure Ctrl/Cmd ao selecionar).
         </p>
         <form action="{{ url_for('galeria_memorial', memorial_id=memorial.id) }}"
               method="POST" enctype="multipart/form-data" class="manual-form">

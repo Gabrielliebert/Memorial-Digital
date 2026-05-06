@@ -1,0 +1,148 @@
+{#
+  Painel administrativo do memorial.
+  Tela dedicada para o moderador — não mostra o memorial em si,
+  apenas as ações de gestão organizadas em cartões.
+#}
+{% extends "base.html" %}
+{% block title %}Painel — {{ memorial.nome }}{% endblock %}
+
+{% block content %}
+<div class="page-container" style="max-width:900px">
+    <div class="page-header">
+        <h1 class="page-title">Painel administrativo</h1>
+        <p class="page-subtitle">
+            Memorial de <strong>{{ memorial.nome }}</strong>
+            {% if memorial.memorial_status == 'memorializado' %}
+            · 🕯️ Em memória
+            {% endif %}
+        </p>
+    </div>
+
+    {% if tributos_pendentes > 0 %}
+    <div class="alert-pendentes" style="max-width:none;margin-bottom:1.5rem">
+        🔔 <strong>{{ tributos_pendentes }}</strong> tributo(s) aguardando sua aprovação.
+        <a href="{{ url_for('moderar_tributos', memorial_id=memorial.id) }}"
+           class="btn-mini" style="margin-left:0.75rem">
+            Moderar agora →
+        </a>
+    </div>
+    {% endif %}
+
+    <div class="painel-grid">
+
+        <a href="{{ url_for('editar_memorial', memorial_id=memorial.id) }}"
+           class="painel-card">
+            <div class="painel-card-icon">✏️</div>
+            <div class="painel-card-content">
+                <h3 class="painel-card-titulo">Editar memorial</h3>
+                <p class="painel-card-desc">
+                    Nome, foto, datas, texto principal e seções.
+                </p>
+            </div>
+        </a>
+
+        <a href="{{ url_for('configurar_memorial', memorial_id=memorial.id) }}"
+           class="painel-card">
+            <div class="painel-card-icon">🔒</div>
+            <div class="painel-card-content">
+                <h3 class="painel-card-titulo">Privacidade</h3>
+                <p class="painel-card-desc">
+                    Quem pode ver, status (ativo/em memória), gestor de legado e tributos.
+                </p>
+            </div>
+        </a>
+
+        <a href="{{ url_for('galeria_memorial', memorial_id=memorial.id) }}"
+           class="painel-card">
+            <div class="painel-card-icon">🖼️</div>
+            <div class="painel-card-content">
+                <h3 class="painel-card-titulo">
+                    Galeria
+                    {% if total_fotos %}<span class="painel-badge">{{ total_fotos }}</span>{% endif %}
+                </h3>
+                <p class="painel-card-desc">
+                    Adicione e organize fotos do memorial.
+                </p>
+            </div>
+        </a>
+
+        <a href="{{ url_for('moderar_tributos', memorial_id=memorial.id) }}"
+           class="painel-card {% if tributos_pendentes %}painel-card-destaque{% endif %}">
+            <div class="painel-card-icon">💬</div>
+            <div class="painel-card-content">
+                <h3 class="painel-card-titulo">
+                    Tributos
+                    {% if tributos_pendentes %}<span class="painel-badge painel-badge-warning">{{ tributos_pendentes }} novo(s)</span>{% endif %}
+                </h3>
+                <p class="painel-card-desc">
+                    Aprovar, rejeitar ou remover tributos enviados.
+                </p>
+            </div>
+        </a>
+
+        <a href="{{ url_for('colaboradores_memorial', memorial_id=memorial.id) }}"
+           class="painel-card">
+            <div class="painel-card-icon">👥</div>
+            <div class="painel-card-content">
+                <h3 class="painel-card-titulo">
+                    Colaboradores
+                    {% if total_colaboradores %}<span class="painel-badge">{{ total_colaboradores }}</span>{% endif %}
+                </h3>
+                <p class="painel-card-desc">
+                    Convidar familiares ou colegas com link de acesso.
+                </p>
+            </div>
+        </a>
+
+        <a href="{{ url_for('ver_dados', memorial_id=memorial.id) }}"
+           class="painel-card">
+            <div class="painel-card-icon">📊</div>
+            <div class="painel-card-content">
+                <h3 class="painel-card-titulo">Dados extraídos</h3>
+                <p class="painel-card-desc">
+                    Inspecionar dados brutos coletados da fonte original.
+                </p>
+            </div>
+        </a>
+
+        <form action="{{ url_for('regenerar_memorial', memorial_id=memorial.id) }}"
+              method="POST" class="inline-form"
+              onsubmit="return confirm('Regenerar texto e seções com IA? Sobrescreve o atual.')">
+            <button type="submit" class="painel-card painel-card-action">
+                <div class="painel-card-icon">🔄</div>
+                <div class="painel-card-content">
+                    <h3 class="painel-card-titulo">Regenerar com IA</h3>
+                    <p class="painel-card-desc">
+                        Refaz o resumo a partir dos dados originais.
+                    </p>
+                </div>
+            </button>
+        </form>
+
+        <form action="{{ url_for('remover_memorial', memorial_id=memorial.id) }}"
+              method="POST" class="inline-form"
+              onsubmit="return confirm('Remover este memorial permanentemente? Esta ação não pode ser desfeita.')">
+            <button type="submit" class="painel-card painel-card-action painel-card-danger">
+                <div class="painel-card-icon">🗑️</div>
+                <div class="painel-card-content">
+                    <h3 class="painel-card-titulo">Excluir memorial</h3>
+                    <p class="painel-card-desc">
+                        Remove permanentemente o memorial e todos os dados.
+                    </p>
+                </div>
+            </button>
+        </form>
+
+    </div>
+
+    <div class="painel-footer">
+        <a href="{{ url_for('ver_memorial', memorial_id=memorial.id) }}"
+           class="btn-gerar painel-btn-ver">
+            👁️ Ver memorial publicamente
+        </a>
+        <a href="{{ url_for('index') }}" class="btn-mini" style="margin-top:0.75rem;display:inline-flex">
+            ← Voltar ao início
+        </a>
+    </div>
+</div>
+{% endblock %}

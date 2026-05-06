@@ -4,8 +4,8 @@
 {% block content %}
 <div class="page-container" style="max-width:850px">
     <div class="page-header">
-        <a href="{{ url_for('ver_memorial', memorial_id=memorial.id) }}" class="back-link">
-            ← Voltar ao memorial
+        <a href="{{ url_for('painel_memorial', memorial_id=memorial.id) }}" class="back-link">
+            ← Voltar ao painel
         </a>
         <h1 class="page-title">Editar memorial</h1>
         <p class="page-subtitle">
@@ -125,7 +125,7 @@
 
         <div class="form-actions">
             <button type="submit" class="btn-gerar">💾 Salvar tudo</button>
-            <a href="{{ url_for('ver_memorial', memorial_id=memorial.id) }}"
+            <a href="{{ url_for('painel_memorial', memorial_id=memorial.id) }}"
                class="btn-action btn-edit">Cancelar</a>
         </div>
     </form>

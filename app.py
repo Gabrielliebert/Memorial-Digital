@@ -249,6 +249,36 @@ def ver_memorial(memorial_id):
                            colaborador=colaborador)
 
 
+@app.route("/memorial/<int:memorial_id>/painel")
+def painel_memorial(memorial_id):
+    """
+    Painel administrativo do memorial — central de moderação.
+    Substitui o "modo moderador" sobreposto à página do visitante:
+    aqui o moderador tem todas as ações em uma tela limpa, sem
+    repetir o conteúdo do memorial.
+
+    Embasamento: Trevisan et al. (2021) — separação clara entre
+    visualização e curadoria. Brubaker et al. (2013) — papéis em
+    memoriais.
+    """
+    memorial = buscar_memorial(memorial_id)
+    if not memorial:
+        flash("Memorial não encontrado.", "erro")
+        return redirect(url_for("index"))
+
+    pendentes = contar_tributos_pendentes(memorial_id)
+    fotos = listar_fotos(memorial_id)
+    colaboradores = listar_colaboradores(memorial_id)
+
+    return render_template(
+        "painel.html",
+        memorial=memorial,
+        tributos_pendentes=pendentes,
+        total_fotos=len(fotos),
+        total_colaboradores=len(colaboradores),
+    )
+
+
 @app.route("/memorial/<int:memorial_id>/configurar", methods=["GET", "POST"])
 def configurar_memorial(memorial_id):
     """UI de configuração: privacidade, status, gestor de legado."""
@@ -267,8 +297,8 @@ def configurar_memorial(memorial_id):
             permitir_tributos=1 if request.form.get("permitir_tributos") else 0,
             auto_aprovar_tributos=1 if request.form.get("auto_aprovar_tributos") else 0,
         )
-        flash("Configurações atualizadas.", "sucesso")
-        return redirect(url_for("configurar_memorial", memorial_id=memorial_id))
+        flash("Privacidade atualizada.", "sucesso")
+        return redirect(url_for("painel_memorial", memorial_id=memorial_id))
 
     return render_template("configurar.html", memorial=memorial)
 
@@ -540,7 +570,7 @@ def editar_memorial(memorial_id):
         else:
             flash("Nenhuma alteração foi feita.", "info")
 
-        return redirect(url_for("ver_memorial", memorial_id=memorial_id))
+        return redirect(url_for("painel_memorial", memorial_id=memorial_id))
 
     return render_template("editar.html", memorial=memorial)
 
@@ -571,7 +601,7 @@ def regenerar_memorial(memorial_id):
         print(f"[Regenerar] ✗ Erro: {e}")
         flash(f"Erro ao regenerar: {e}", "erro")
 
-    return redirect(url_for("ver_memorial", memorial_id=memorial_id))
+    return redirect(url_for("painel_memorial", memorial_id=memorial_id))
 
 
 @app.route("/memorial/<int:memorial_id>/deletar", methods=["POST"])

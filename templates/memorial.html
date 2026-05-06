@@ -99,7 +99,9 @@
                 🖨️ Imprimir
             </button>
             {% if not is_moderador %}
-            <a href="?mod=1" class="btn-mini btn-mini-mod" title="Editar, configurar e moderar este memorial">
+            <a href="{{ url_for('painel_memorial', memorial_id=memorial.id) }}"
+               class="btn-mini btn-mini-mod"
+               title="Painel administrativo">
                 ⚙️ Gerenciar
             </a>
             {% endif %}
@@ -109,52 +111,19 @@
              Embasamento: Trevisan et al. (2021) — separar visualização de
              edição. Visitante não precisa ver Editar/Regenerar/Remover. #}
         {% if is_moderador %}
-        {% if tributos_pendentes > 0 %}
-        <div class="alert-pendentes">
-            🔔 <strong>{{ tributos_pendentes }}</strong> mensagem(s) aguardando sua aprovação.
-            <a href="{{ url_for('moderar_tributos', memorial_id=memorial.id) }}"
-               class="btn-mini" style="margin-left:0.75rem">
-                Moderar agora →
-            </a>
-        </div>
-        {% endif %}
+        {# Quando entra via ?mod=1 mostra apenas botão para ir ao painel
+           administrativo. O resto das ações ficou no painel. #}
         <div class="moderator-bar">
             <span class="moderator-label">⚙️ Modo gerenciar ativo</span>
             <div class="moderator-actions">
-                <a href="{{ url_for('editar_memorial', memorial_id=memorial.id) }}"
-                   class="btn-mod btn-mod-primary" title="Editar memorial">
-                    ✏️ Editar
+                <a href="{{ url_for('painel_memorial', memorial_id=memorial.id) }}"
+                   class="btn-mod btn-mod-primary" title="Abrir painel administrativo">
+                    🛠️ Abrir painel
                 </a>
-                <form action="{{ url_for('regenerar_memorial', memorial_id=memorial.id) }}"
-                      method="POST" class="inline-form"
-                      onsubmit="return confirm('Regenerar texto com IA?')">
-                    <button type="submit" class="btn-mod" title="Regenerar texto com IA">🔄 Regenerar</button>
-                </form>
-                <a href="{{ url_for('configurar_memorial', memorial_id=memorial.id) }}"
-                   class="btn-mod" title="Configurar privacidade">⚙️ Configurar</a>
-                <a href="{{ url_for('galeria_memorial', memorial_id=memorial.id) }}"
-                   class="btn-mod" title="Gerenciar galeria de fotos">
-                    🖼️ Galeria
-                    {% if fotos %}<span class="badge-pendentes" style="background:var(--accent-primary);color:white">{{ fotos|length }}</span>{% endif %}
-                </a>
-                <a href="{{ url_for('colaboradores_memorial', memorial_id=memorial.id) }}"
-                   class="btn-mod" title="Convidar colaboradores">
-                    👥 Colaboradores
-                </a>
-                <a href="{{ url_for('moderar_tributos', memorial_id=memorial.id) }}"
-                   class="btn-mod" title="Moderar mensagens">
-                    💬 Mensagens
-                    {% if tributos_pendentes > 0 %}<span class="badge-pendentes">{{ tributos_pendentes }}</span>{% endif %}
-                </a>
-                <a href="{{ url_for('ver_dados', memorial_id=memorial.id) }}"
-                   class="btn-mod" title="Ver dados extraídos">📊 Dados</a>
-                <form action="{{ url_for('remover_memorial', memorial_id=memorial.id) }}"
-                      method="POST" class="inline-form"
-                      onsubmit="return confirm('Remover este memorial permanentemente?')">
-                    <button type="submit" class="btn-mod btn-mod-danger" title="Remover">🗑️ Remover</button>
-                </form>
                 <a href="{{ url_for('ver_memorial', memorial_id=memorial.id) }}"
-                   class="btn-mod" title="Voltar à visualização normal">👁️ Sair</a>
+                   class="btn-mod btn-mod-sair" title="Sair do modo gerenciar">
+                    ✕ Sair do modo gerenciar
+                </a>
             </div>
         </div>
         {% endif %}
@@ -235,9 +204,14 @@
     {% if memorial.permitir_tributos %}
     <section class="tributos-section">
         <h2 class="secao-titulo" style="text-align:center">
-            {% if is_memorializado %}🕯️ Mensagens em memória{% else %}💬 Mensagens{% endif %}
+            🕯️ Tributos
             {% if tributos %}<span class="badge">{{ tributos|length }}</span>{% endif %}
         </h2>
+        <p class="tributos-descricao">
+            Deixe um tributo público de admiração, respeito, gratidão ou
+            reconhecimento pelas realizações, qualidades ou legado de
+            <strong>{{ memorial.nome.split()[0] }}</strong>.
+        </p>
 
         {% if tributos %}
         <div class="tributos-list">
@@ -253,17 +227,13 @@
         </div>
         {% else %}
         <p class="text-muted" style="text-align:center;padding:1rem">
-            {% if is_memorializado %}
-                Seja o primeiro a acender uma vela e deixar uma palavra.
-            {% else %}
-                Seja o primeiro a deixar uma mensagem.
-            {% endif %}
+            Seja a primeira pessoa a deixar um tributo.
         </p>
         {% endif %}
 
         <details class="tributo-form-wrapper">
             <summary class="btn-gerar tributo-form-toggle">
-                {% if is_memorializado %}🕯️ Deixar uma mensagem{% else %}💌 Deixar uma mensagem{% endif %}
+                {% if is_memorializado %}🕯️ Deixar um tributo{% else %}💌 Deixar um tributo{% endif %}
             </summary>
             <form action="{{ url_for('enviar_tributo', memorial_id=memorial.id) }}"
                   method="POST" class="manual-form" style="margin-top:1rem">
@@ -301,24 +271,16 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="mensagem" class="form-label">Sua mensagem</label>
+                    <label for="mensagem" class="form-label">Seu tributo</label>
                     <textarea name="mensagem" id="mensagem" class="form-textarea"
                               rows="5" maxlength="1000" required
-                              placeholder="{% if is_memorializado %}Compartilhe uma lembrança ou uma palavra de despedida... ou clique em ✨ Sugerir acima.{% else %}Deixe uma palavra de reconhecimento... ou clique em ✨ Sugerir acima.{% endif %}"></textarea>
+                              placeholder="{% if is_memorializado %}Compartilhe uma lembrança, palavra de despedida ou reconhecimento ao legado...{% else %}Deixe uma palavra de admiração, respeito ou reconhecimento...{% endif %}"></textarea>
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn-gerar">
-                        {% if is_memorializado %}🕯️ Enviar tributo{% else %}💌 Enviar mensagem{% endif %}
+                        {% if is_memorializado %}🕯️ Enviar tributo{% else %}💌 Enviar tributo{% endif %}
                     </button>
                 </div>
-                <p class="form-hint">
-                    {% if memorial.auto_aprovar_tributos %}
-                    Mensagens são publicadas imediatamente.
-                    {% else %}
-                    Mensagens passam por moderação antes de serem publicadas
-                    (Maciel et al., 2019 — recomendação de curadoria humana).
-                    {% endif %}
-                </p>
             </form>
         </details>
     </section>

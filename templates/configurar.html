@@ -1,18 +1,16 @@
 {% extends "base.html" %}
-{% block title %}Configurar — {{ memorial.nome }}{% endblock %}
+{% block title %}Privacidade — {{ memorial.nome }}{% endblock %}
 
 {% block content %}
 <div class="page-container">
     <div class="page-header">
-        <a href="{{ url_for('ver_memorial', memorial_id=memorial.id) }}" class="back-link">
-            ← Voltar ao memorial
+        <a href="{{ url_for('painel_memorial', memorial_id=memorial.id) }}" class="back-link">
+            ← Voltar ao painel
         </a>
-        <h1 class="page-title">Configurações do Memorial</h1>
+        <h1 class="page-title">Privacidade do memorial</h1>
         <p class="page-subtitle">
-            Estas opções controlam <strong>quem pode ver</strong> e
-            <strong>quem pode interagir</strong> com o memorial de
-            <strong>{{ memorial.nome }}</strong>. Configurações alinhadas aos
-            princípios de Maciel et al. (2019) e Ueda et al. (2022).
+            Defina <strong>quem pode ver</strong> e <strong>quem pode interagir</strong>
+            com o memorial de <strong>{{ memorial.nome }}</strong>.
         </p>
     </div>
 
@@ -20,7 +18,7 @@
 
         <!-- Visibilidade ───────────────────────── -->
         <div class="config-section">
-            <h2 class="config-section-title">🔒 Privacidade</h2>
+            <h2 class="config-section-title">🔒 Visibilidade</h2>
             <p class="config-section-desc">
                 Define quem pode acessar este memorial.
             </p>
@@ -49,8 +47,8 @@
         <div class="config-section">
             <h2 class="config-section-title">📌 Status do memorial</h2>
             <p class="config-section-desc">
-                Diferencia memoriais de pessoas vivas (perfil profissional)
-                de memoriais comemorativos pós-vida (Ueda 2022).
+                Diferencia perfis de pessoas vivas (profissional / biográfico)
+                de memoriais comemorativos pós-vida.
             </p>
 
             <div class="radio-group">
@@ -66,7 +64,7 @@
                     <input type="radio" name="memorial_status" value="memorializado"
                            {% if memorial.memorial_status == 'memorializado' %}checked{% endif %}>
                     <div>
-                        <strong>Memorializado</strong>
+                        <strong>Em memória</strong>
                         <span>Pessoa falecida — espaço de tributos e memória.</span>
                     </div>
                 </label>
@@ -92,16 +90,16 @@
 
         <!-- Tributos ────────────────────────────── -->
         <div class="config-section">
-            <h2 class="config-section-title">💬 Colaboração</h2>
+            <h2 class="config-section-title">🕯️ Tributos</h2>
             <p class="config-section-desc">
-                Tributos permitem que outras pessoas deixem mensagens. Toda mensagem
-                passa por moderação antes de aparecer publicamente.
+                Tributos são mensagens públicas de admiração, respeito ou
+                reconhecimento ao legado do(a) homenageado(a).
             </p>
 
             <label class="checkbox-line">
                 <input type="checkbox" name="permitir_tributos"
                        {% if memorial.permitir_tributos %}checked{% endif %}>
-                <span>Permitir que visitantes enviem tributos</span>
+                <span>Permitir que visitantes deixem tributos</span>
             </label>
 
             <label class="checkbox-line" style="margin-top:0.5rem">
@@ -110,8 +108,7 @@
                 <span>
                     Publicar tributos automaticamente (sem moderação prévia)
                     <small style="display:block;color:var(--text-muted);font-size:0.78rem;margin-top:0.2rem">
-                        Recomendado <strong>desativado</strong> para memoriais sensíveis
-                        (Maciel et al., 2019 — curadoria humana protege contra abuso).
+                        Recomendado <strong>desativado</strong> para memoriais sensíveis.
                     </small>
                 </span>
             </label>
@@ -133,11 +130,9 @@
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn-gerar">💾 Salvar configurações</button>
-            <a href="{{ url_for('moderar_tributos', memorial_id=memorial.id) }}"
-               class="btn-action btn-edit">
-                🛡️ Moderar tributos
-            </a>
+            <button type="submit" class="btn-gerar">💾 Salvar privacidade</button>
+            <a href="{{ url_for('painel_memorial', memorial_id=memorial.id) }}"
+               class="btn-mini" style="margin-left:0.5rem">Cancelar</a>
         </div>
     </form>
 </div>
