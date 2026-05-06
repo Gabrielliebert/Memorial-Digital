@@ -81,6 +81,15 @@
         </div>
         {% endif %}
 
+        {# ── Convite aceito (acesso por token de colaborador) ── #}
+        {% if colaborador %}
+        <div class="alert-convite">
+            👋 Olá <strong>{{ colaborador.nome or colaborador.email }}</strong>!
+            Você está acessando este memorial como
+            <strong>{{ colaborador.papel }}</strong>.
+        </div>
+        {% endif %}
+
         {# ── Ações públicas (visitante) — discretas, abaixo do resumo ── #}
         <div class="acoes-visitante">
             <button class="btn-mini" onclick="compartilhar()" title="Compartilhar este memorial">
@@ -90,8 +99,8 @@
                 🖨️ Imprimir
             </button>
             {% if not is_moderador %}
-            <a href="?mod=1" class="btn-mini btn-mini-mod" title="Acessar ferramentas de moderação">
-                🛠️ Sou o criador
+            <a href="?mod=1" class="btn-mini btn-mini-mod" title="Editar, configurar e moderar este memorial">
+                ⚙️ Gerenciar
             </a>
             {% endif %}
         </div>
@@ -100,8 +109,17 @@
              Embasamento: Trevisan et al. (2021) — separar visualização de
              edição. Visitante não precisa ver Editar/Regenerar/Remover. #}
         {% if is_moderador %}
+        {% if tributos_pendentes > 0 %}
+        <div class="alert-pendentes">
+            🔔 <strong>{{ tributos_pendentes }}</strong> mensagem(s) aguardando sua aprovação.
+            <a href="{{ url_for('moderar_tributos', memorial_id=memorial.id) }}"
+               class="btn-mini" style="margin-left:0.75rem">
+                Moderar agora →
+            </a>
+        </div>
+        {% endif %}
         <div class="moderator-bar">
-            <span class="moderator-label">🛠️ Modo moderador ativo</span>
+            <span class="moderator-label">⚙️ Modo gerenciar ativo</span>
             <div class="moderator-actions">
                 <a href="{{ url_for('editar_memorial', memorial_id=memorial.id) }}"
                    class="btn-mod btn-mod-primary" title="Editar memorial">
@@ -114,8 +132,20 @@
                 </form>
                 <a href="{{ url_for('configurar_memorial', memorial_id=memorial.id) }}"
                    class="btn-mod" title="Configurar privacidade">⚙️ Configurar</a>
+                <a href="{{ url_for('galeria_memorial', memorial_id=memorial.id) }}"
+                   class="btn-mod" title="Gerenciar galeria de fotos">
+                    🖼️ Galeria
+                    {% if fotos %}<span class="badge-pendentes" style="background:var(--accent-primary);color:white">{{ fotos|length }}</span>{% endif %}
+                </a>
+                <a href="{{ url_for('colaboradores_memorial', memorial_id=memorial.id) }}"
+                   class="btn-mod" title="Convidar colaboradores">
+                    👥 Colaboradores
+                </a>
                 <a href="{{ url_for('moderar_tributos', memorial_id=memorial.id) }}"
-                   class="btn-mod" title="Moderar mensagens">💬 Mensagens</a>
+                   class="btn-mod" title="Moderar mensagens">
+                    💬 Mensagens
+                    {% if tributos_pendentes > 0 %}<span class="badge-pendentes">{{ tributos_pendentes }}</span>{% endif %}
+                </a>
                 <a href="{{ url_for('ver_dados', memorial_id=memorial.id) }}"
                    class="btn-mod" title="Ver dados extraídos">📊 Dados</a>
                 <form action="{{ url_for('remover_memorial', memorial_id=memorial.id) }}"
@@ -124,8 +154,37 @@
                     <button type="submit" class="btn-mod btn-mod-danger" title="Remover">🗑️ Remover</button>
                 </form>
                 <a href="{{ url_for('ver_memorial', memorial_id=memorial.id) }}"
-                   class="btn-mod" title="Voltar à visualização normal">👁️ Sair do modo mod</a>
+                   class="btn-mod" title="Voltar à visualização normal">👁️ Sair</a>
             </div>
+        </div>
+        {% endif %}
+
+        {# ── Galeria de fotos (Walter, 2015: luto multimídia;
+             plano de trabalho — coleta multimodal) ── #}
+        {% if fotos %}
+        <div class="memorial-galeria">
+            <h2 class="explorar-titulo">📸 Galeria</h2>
+            <div class="galeria-grid">
+                {% for f in fotos %}
+                <figure class="galeria-item" onclick="abrirLightbox({{ loop.index0 }})">
+                    <img src="{{ f.foto_url }}" alt="{{ f.legenda or memorial.nome }}"
+                         loading="lazy"
+                         onerror="this.parentElement.style.display='none'">
+                    {% if f.legenda %}
+                    <figcaption class="galeria-legenda">{{ f.legenda }}</figcaption>
+                    {% endif %}
+                </figure>
+                {% endfor %}
+            </div>
+        </div>
+
+        {# Lightbox simples #}
+        <div class="lightbox" id="lightbox" onclick="fecharLightbox()">
+            <span class="lightbox-close">✕</span>
+            <button class="lightbox-nav lightbox-prev" onclick="event.stopPropagation();navegarLightbox(-1)">‹</button>
+            <img class="lightbox-img" id="lightboxImg" alt="" onclick="event.stopPropagation()">
+            <button class="lightbox-nav lightbox-next" onclick="event.stopPropagation();navegarLightbox(1)">›</button>
+            <div class="lightbox-legenda" id="lightboxLegenda"></div>
         </div>
         {% endif %}
 
@@ -213,11 +272,39 @@
                     <input type="text" name="autor" id="autor" class="form-input"
                            maxlength="80" required>
                 </div>
+
+                {# ── Sugestão assistida (plano de trabalho — composição
+                     assistida com IA, Monteiro et al., 2024) ── #}
+                <div class="form-group">
+                    <label class="form-label">Sua relação com {{ memorial.nome.split()[0] }}</label>
+                    <select id="relacaoSelect" class="form-input">
+                        <option value="">Selecione (opcional)</option>
+                        <option value="colega">Colega</option>
+                        <option value="ex-aluno">Ex-aluno(a)</option>
+                        <option value="aluno atual">Aluno(a) atual</option>
+                        <option value="orientando">Orientando(a)</option>
+                        <option value="amigo">Amigo(a)</option>
+                        <option value="familiar">Familiar</option>
+                        <option value="admirador">Admirador(a) do trabalho</option>
+                        <option value="leitor">Leitor(a) de produções</option>
+                    </select>
+                    <button type="button" class="btn-mini" id="btnSugerir"
+                            style="margin-top:0.5rem"
+                            data-url="{{ url_for('api_sugerir_tributos', memorial_id=memorial.id) }}">
+                        ✨ Sugerir mensagem com IA
+                    </button>
+                </div>
+
+                <div id="sugestoesBox" class="sugestoes-box" style="display:none">
+                    <p class="sugestoes-titulo">💡 Clique em uma sugestão para usar:</p>
+                    <div id="sugestoesLista"></div>
+                </div>
+
                 <div class="form-group">
                     <label for="mensagem" class="form-label">Sua mensagem</label>
                     <textarea name="mensagem" id="mensagem" class="form-textarea"
-                              rows="4" maxlength="1000" required
-                              placeholder="{% if is_memorializado %}Compartilhe uma lembrança ou uma palavra de despedida...{% else %}Deixe uma palavra de reconhecimento...{% endif %}"></textarea>
+                              rows="5" maxlength="1000" required
+                              placeholder="{% if is_memorializado %}Compartilhe uma lembrança ou uma palavra de despedida... ou clique em ✨ Sugerir acima.{% else %}Deixe uma palavra de reconhecimento... ou clique em ✨ Sugerir acima.{% endif %}"></textarea>
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn-gerar">
@@ -225,8 +312,12 @@
                     </button>
                 </div>
                 <p class="form-hint">
+                    {% if memorial.auto_aprovar_tributos %}
+                    Mensagens são publicadas imediatamente.
+                    {% else %}
                     Mensagens passam por moderação antes de serem publicadas
                     (Maciel et al., 2019 — recomendação de curadoria humana).
+                    {% endif %}
                 </p>
             </form>
         </details>
@@ -265,6 +356,94 @@ function compartilhar() {
             .then(() => mostrarToast('✓ Link copiado para a área de transferência!'))
             .catch(() => mostrarToast('Copie o link na barra do navegador.'));
     }
+}
+
+// ── Lightbox da galeria ────────────────────────────────────────────
+const fotosGaleria = [
+    {% for f in fotos %}
+    { url: "{{ f.foto_url|e }}", legenda: "{{ (f.legenda or '')|e }}" }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+let lightboxIdx = 0;
+
+function abrirLightbox(idx) {
+    if (!fotosGaleria.length) return;
+    lightboxIdx = idx;
+    const lb = document.getElementById('lightbox');
+    const img = document.getElementById('lightboxImg');
+    const leg = document.getElementById('lightboxLegenda');
+    img.src = fotosGaleria[idx].url;
+    leg.textContent = fotosGaleria[idx].legenda;
+    leg.style.display = fotosGaleria[idx].legenda ? 'block' : 'none';
+    lb.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function fecharLightbox() {
+    document.getElementById('lightbox').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+function navegarLightbox(delta) {
+    if (!fotosGaleria.length) return;
+    lightboxIdx = (lightboxIdx + delta + fotosGaleria.length) % fotosGaleria.length;
+    abrirLightbox(lightboxIdx);
+}
+
+// Setas do teclado
+document.addEventListener('keydown', (e) => {
+    if (document.getElementById('lightbox')?.style.display !== 'flex') return;
+    if (e.key === 'Escape') fecharLightbox();
+    if (e.key === 'ArrowLeft') navegarLightbox(-1);
+    if (e.key === 'ArrowRight') navegarLightbox(1);
+});
+
+// ── Sugestão assistida de tributos via IA ─────────────────────────
+const btnSugerir = document.getElementById('btnSugerir');
+if (btnSugerir) {
+    btnSugerir.addEventListener('click', async () => {
+        const relacao = document.getElementById('relacaoSelect').value;
+        const url = btnSugerir.dataset.url;
+        const box = document.getElementById('sugestoesBox');
+        const lista = document.getElementById('sugestoesLista');
+
+        btnSugerir.disabled = true;
+        const textoOriginal = btnSugerir.innerHTML;
+        btnSugerir.innerHTML = '⏳ Gerando sugestões...';
+
+        try {
+            const fd = new FormData();
+            fd.append('relacao', relacao);
+            const resp = await fetch(url, { method: 'POST', body: fd });
+            const data = await resp.json();
+
+            if (data.erro || !data.sugestoes || !data.sugestoes.length) {
+                mostrarToast('Não foi possível gerar sugestões agora. Tente escrever uma mensagem original.');
+                return;
+            }
+
+            lista.innerHTML = '';
+            data.sugestoes.forEach((s) => {
+                const card = document.createElement('button');
+                card.type = 'button';
+                card.className = 'sugestao-card';
+                card.textContent = s;
+                card.addEventListener('click', () => {
+                    document.getElementById('mensagem').value = s;
+                    document.getElementById('mensagem').focus();
+                    box.style.display = 'none';
+                    mostrarToast('Sugestão aplicada! Edite à vontade antes de enviar.');
+                });
+                lista.appendChild(card);
+            });
+            box.style.display = 'block';
+        } catch (e) {
+            mostrarToast('Erro ao gerar sugestões. Tente de novo.');
+        } finally {
+            btnSugerir.disabled = false;
+            btnSugerir.innerHTML = textoOriginal;
+        }
+    });
 }
 </script>
 {% endblock %}

@@ -196,77 +196,70 @@ def _chamar_ollama(prompt: str) -> str:
 
 def _construir_prompt_resumo(dados: dict, status: str) -> str:
     """
-    Prompt para resumo ULTRA enxuto: 1 frase, no máximo 2.
+    Prompt para resumo ULTRA enxuto: 1 frase começando pela profissão
+    (NÃO repete o nome — ele já está em destaque no header acima).
 
     Embasamento — Lopes, Maciel & Pereira (2014, "Virtual Homage to the Dead"):
-    a identidade essencial em um memorial digital deve ser breve e direta,
-    funcionando como "porta de entrada" para detalhes em camadas (Maciel et
-    al., 2019 — progressive disclosure). Excesso de informação inicial gera
-    sobrecarga cognitiva e reduz acessibilidade emocional ao memorial.
+    identidade essencial em uma sentença direta. Maciel et al. (2019) —
+    progressive disclosure: detalhes vão para camadas expansíveis.
 
-    Formato esperado: "{Nome} é/foi {profissão genérica}, atua/atuou
-    principalmente na área de {área generalista — ex: Computação, Educação,
-    Engenharia, Saúde}."
+    Formato esperado: "Professor e pesquisador na área de Computação,
+    atuou principalmente em ensino superior." (sem repetir nome)
     """
     nome = dados.get("nome", "Pesquisador(a)")
     primeiro_nome = nome.split()[0] if nome else "X"
     dados_texto = _formatar_dados_para_prompt(dados)
 
     if status == "memorializado":
-        verbo_ser = "foi"
-        verbo_atuar = "atuou"
-        exemplo = f"{nome} foi professor e pesquisador, atuou principalmente na área de Computação."
+        verbo_atuar = "Atuou"
+        exemplo = "Professor e pesquisador na área de Computação, atuou principalmente em ensino superior e pesquisa em sistemas computacionais."
+        contexto_temp = "no PASSADO (atuou, dedicou-se, contribuiu)"
     else:
-        verbo_ser = "é"
-        verbo_atuar = "atua"
-        exemplo = f"{nome} é professor e pesquisador, atua principalmente na área de Computação."
+        verbo_atuar = "Atua"
+        exemplo = "Professor e pesquisador na área de Computação, atua principalmente em ensino superior e pesquisa em sistemas computacionais."
+        contexto_temp = "no PRESENTE (atua, dedica-se, contribui)"
 
     prompt = f"""/no_think
 
-Tarefa: escrever UMA ÚNICA FRASE descrevendo {nome}.
+Tarefa: escrever UMA frase curta descrevendo a trajetória profissional desta pessoa.
 
 FORMATO OBRIGATÓRIO:
-"{nome} {verbo_ser} [profissão], {verbo_atuar} principalmente na área de [ÁREA GENERALISTA]."
+"[Profissão] na área de [ÁREA GENERALISTA], {verbo_atuar.lower()} principalmente em [foco principal de atuação]."
 
-REGRAS RÍGIDAS — viole qualquer uma e a resposta será rejeitada:
+REGRAS — viole qualquer uma e a resposta será rejeitada:
 
-1. APENAS UMA FRASE. No máximo 25 palavras. Ponto final no fim.
+1. NÃO COMECE com o nome da pessoa. O nome já aparece em destaque acima.
+   Comece DIRETAMENTE com a profissão (ex: "Professor e pesquisador...").
 
-2. ÁREA = palavra única e GENERALISTA. Use APENAS uma destas categorias amplas:
-   - Computação
-   - Engenharia
-   - Educação
-   - Saúde
-   - Ciências Humanas
-   - Ciências Sociais
-   - Ciências Exatas
-   - Ciências Biológicas
-   - Direito
-   - Artes
-   NÃO use sub-áreas (NÃO escreva "Interação Humano-Computador", "Engenharia
-   de Software", "Educação Matemática", "Ciência da Computação"). Generalize
-   sempre para a categoria ampla acima.
+2. UMA frase apenas. Máximo 30 palavras. Ponto final.
 
-3. PROFISSÃO = palavra simples e clara: "professor", "pesquisador",
-   "professor e pesquisador", "médico", "engenheiro", "advogado", etc.
-   NÃO use cargos específicos como "Professor Adjunto IV" ou "Coordenador
-   do Programa X".
+3. ÁREA = uma destas categorias generalistas (escolha UMA):
+   Computação | Engenharia | Educação | Saúde | Direito | Artes
+   Ciências Humanas | Ciências Sociais | Ciências Exatas
+   Ciências Biológicas | Ciências Agrárias | Linguística e Letras
 
-4. EM PORTUGUÊS DO BRASIL. Nunca em inglês.
+   NÃO use sub-áreas (NÃO: "Interação Humano-Computador", "IHC",
+   "Engenharia de Software", "Educação Matemática"). SEMPRE generalize
+   para a categoria ampla acima.
 
-5. SEM MARKDOWN. Sem aspas. Sem negrito. Sem itálico.
+4. Verbo {contexto_temp}.
 
-6. NÃO acrescente NADA além da frase única. Nada de "em resumo", nada de
-   "destaca-se por", nada de segunda frase.
+5. PROFISSÃO simples: "professor", "pesquisador", "médico", "engenheiro",
+   "professor e pesquisador". NÃO use cargos como "Professor Adjunto IV".
 
-EXEMPLO da única coisa que você deve responder:
+6. Em português do Brasil. Sem markdown. Sem aspas. Sem inglês.
+
+7. NÃO acrescente nada além da frase única. Sem "Em resumo", sem
+   "destaca-se por", sem segunda frase.
+
+EXEMPLO da única resposta válida:
 {exemplo}
 
-DADOS DE {nome.upper()} (use apenas para identificar a área generalista):
+DADOS (use apenas para identificar área e foco):
 
 {dados_texto}
 
-Responda APENAS a frase única. Nada mais."""
+Responda APENAS com a frase única, começando pela profissão. Nada mais."""
     return prompt
 
 
@@ -305,8 +298,111 @@ def _formatar_dados_para_prompt(dados: dict) -> str:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# Sanitização e validação
+# Sugestão assistida de tributos (Monteiro et al., 2024;
+# Maciel et al., 2019 — IA generativa para composição de homenagens)
 # ═══════════════════════════════════════════════════════════════════
+
+def sugerir_tributos(memorial: dict, relacao: str, n: int = 3) -> list[str]:
+    """
+    Pede à IA que sugira N mensagens de tributo curtas para o memorial,
+    respeitando a relação informada pelo usuário (colega, ex-aluno,
+    familiar, etc.) e o status do memorial (ativo/memorializado).
+
+    Embasamento: plano de trabalho 2025/2026 — "compor mensagens de
+    tributo em linguagem natural" (Monteiro). Maciel et al. (2019) —
+    composição assistida que reduz fricção sem substituir a curadoria
+    humana (usuário sempre edita antes de enviar).
+
+    Args:
+        memorial: dict com nome, memorial_status, etc.
+        relacao: como o autor se relaciona com a pessoa
+                 (ex: "colega", "ex-aluno", "familiar", "amigo")
+        n: quantas sugestões gerar (default 3)
+
+    Returns:
+        Lista de strings — cada string é uma sugestão de mensagem.
+        Se a IA falhar, retorna lista vazia (frontend trata).
+    """
+    nome = memorial.get("nome", "")
+    primeiro_nome = nome.split()[0] if nome else ""
+    status = memorial.get("memorial_status", "ativo")
+    relacao_limpa = (relacao or "").strip().lower()[:40]
+
+    # Tom conforme status
+    if status == "memorializado":
+        contexto_tom = (
+            "Esta é uma mensagem em memória de alguém que faleceu. "
+            "Use tom de despedida e reconhecimento, no PASSADO."
+        )
+    else:
+        contexto_tom = (
+            "Esta é uma mensagem para um perfil profissional ativo. "
+            "Use tom de reconhecimento e admiração, no PRESENTE."
+        )
+
+    # Contexto sobre a pessoa (resumo curto + área se houver)
+    resumo_pessoa = (memorial.get("texto_principal") or "")[:300]
+
+    prompt = f"""/no_think
+
+Tarefa: gerar {n} sugestões DIFERENTES de mensagens curtas de tributo
+para um memorial digital.
+
+CONTEXTO:
+- Nome do(a) homenageado(a): {nome}
+- Sobre a pessoa: {resumo_pessoa}
+- Sua relação com {primeiro_nome}: {relacao_limpa or 'pessoa próxima'}
+- Tom: {contexto_tom}
+
+REGRAS RÍGIDAS:
+1. Em português do Brasil. Nunca em inglês.
+2. Cada mensagem: 1 a 3 frases. No máximo 60 palavras.
+3. Mensagens DIFERENTES entre si — variar tom (formal/afetuoso/breve).
+4. Não invente fatos sobre a pessoa. Use APENAS o que está no contexto.
+5. Sem markdown. Sem aspas. Sem títulos.
+6. Comece direto na mensagem (NÃO escreva "Mensagem 1:" nem numere).
+
+FORMATO DE SAÍDA — separe as {n} mensagens por exatamente:
+|||
+
+Exemplo de saída para n=3:
+Mensagem mais formal aqui em uma ou duas frases.|||Mensagem mais afetuosa aqui em uma ou duas frases.|||Mensagem mais breve aqui em uma frase.
+
+Responda APENAS as {n} mensagens separadas por |||."""
+
+    try:
+        if config.LLM_PROVIDER == "gemini":
+            url = (
+                f"https://generativelanguage.googleapis.com/v1beta/models/"
+                f"{config.GEMINI_MODEL}:generateContent?key={config.GEMINI_API_KEY}"
+            )
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": 0.7,  # alta: queremos variação
+                    "maxOutputTokens": 400,
+                    "responseMimeType": "text/plain",
+                },
+            }
+            r = requests.post(url, json=payload, timeout=30)
+            r.raise_for_status()
+            data = r.json()
+            partes = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+            texto = "".join(p.get("text", "") for p in partes).strip()
+        else:
+            texto = _chamar_ollama(prompt)
+
+        # Limpar e dividir
+        texto = _strip_thinking(texto)
+        texto = _limpar_markdown(texto)
+        sugestoes = [s.strip() for s in texto.split("|||") if s.strip()]
+        # Filtra sugestões muito curtas ou muito longas
+        sugestoes = [s for s in sugestoes if 20 <= len(s) <= 500]
+        return sugestoes[:n]
+
+    except Exception as e:
+        print(f"[Sugerir Tributo] ✗ Erro: {e}")
+        return []
 
 def _sanitizar_texto(texto: str, nome: str) -> str:
     """Limpa o texto bruto da IA: remove markdown, thinking, ruído."""
@@ -349,13 +445,13 @@ def _sanitizar_texto(texto: str, nome: str) -> str:
 
 def _texto_valido(texto: str, nome: str) -> bool:
     """
-    Valida que o texto é UMA frase curta (15-300 chars).
-    Embasamento: identidade essencial em uma sentença
-    (Lopes, Maciel & Pereira, 2014).
+    Valida que o texto é UMA frase curta (15-300 chars) e em português.
+    O nome NÃO precisa estar no texto (agora começa pela profissão).
+    Embasamento: Lopes, Maciel & Pereira (2014).
     """
     if not texto or len(texto) < 15:
         return False
-    if len(texto) > 300:  # mais que 300 chars = a IA ignorou as regras
+    if len(texto) > 300:
         print(f"[Gerador] ⚠ Texto muito longo ({len(texto)} chars), max 300.")
         return False
     # Detectar texto em inglês
@@ -363,9 +459,10 @@ def _texto_valido(texto: str, nome: str) -> bool:
     txt_lower = " " + texto.lower() + " "
     if sum(1 for m in marcadores_en if m in txt_lower) >= 2:
         return False
-    # Primeiro nome deve aparecer
+    # Rejeita se começa com o nome (queremos começar pela profissão)
     primeiro_nome = nome.split()[0] if nome else ""
-    if primeiro_nome and primeiro_nome.lower() not in texto.lower():
+    if primeiro_nome and texto.strip().lower().startswith(primeiro_nome.lower()):
+        print(f"[Gerador] ⚠ Texto começa com o nome — re-tentar")
         return False
     return True
 
@@ -376,21 +473,18 @@ def _texto_valido(texto: str, nome: str) -> bool:
 
 def _montar_texto_fallback(dados: dict, status: str) -> str:
     """
-    Fallback determinístico: UMA frase com área generalizada.
+    Fallback determinístico: 1 frase começando pela profissão (sem nome).
     Embasamento: identidade essencial (Lopes, Maciel & Pereira, 2014).
     """
-    nome = dados.get("nome", "Pesquisador(a)")
-    if status == "memorializado":
-        verbo_ser, verbo_atuar = "foi", "atuou"
-    else:
-        verbo_ser, verbo_atuar = "é", "atua"
-
-    # Tenta inferir a "grande área" a partir das áreas detalhadas
+    verbo_atuar = "atuou" if status == "memorializado" else "atua"
     area = _inferir_grande_area(dados)
 
     if area:
-        return f"{nome} {verbo_ser} pesquisador(a), {verbo_atuar} principalmente na área de {area}."
-    return f"{nome} {verbo_ser} pesquisador(a) e profissional acadêmico(a)."
+        return (
+            f"Profissional na área de {area}, "
+            f"{verbo_atuar} em pesquisa e atividades acadêmicas."
+        )
+    return f"Profissional com trajetória em pesquisa e {'atuação acadêmica passada' if status == 'memorializado' else 'atuação acadêmica em curso'}."
 
 
 # Mapeamento de palavras-chave → grande área (CNPq/CAPES generalizada)
@@ -449,10 +543,35 @@ def _inferir_grande_area(dados: dict) -> str | None:
 # ═══════════════════════════════════════════════════════════════════
 
 def _montar_secoes(dados: dict) -> list[dict]:
-    """Monta seções a partir dos dados, sem depender de IA."""
+    """
+    Monta seções estruturadas a partir dos dados extraídos.
+    Cada item é limpo (remove ruído do HTML do Lattes) e formatado
+    em uma linha legível.
+    """
     secoes = []
 
+    def _limpar_item(texto: str) -> str:
+        """Remove ruídos comuns do parsing do Lattes."""
+        if not texto:
+            return ""
+        # Normalizar espaços (incluindo NBSP, tabs, múltiplos)
+        texto = re.sub(r"[\xa0\t]+", " ", texto)
+        texto = re.sub(r"\s{2,}", " ", texto)
+        # Inserir espaço entre minúscula+maiúscula coladas (nomes próprios)
+        # Ex: "DoutoradoEducação" → "Doutorado Educação"
+        texto = re.sub(r"([a-záéíóúâêôãõç])([A-ZÁÉÍÓÚÂÊÔÃÕÇ])", r"\1 \2", texto)
+        # Inserir espaço antes de letra maiúscula seguida de minúscula
+        # quando precedida de número/parêntese (ex: "2020Doutor" → "2020 Doutor")
+        texto = re.sub(r"(\d|\))([A-ZÁÉÍÓÚÂÊÔÃÕÇ])", r"\1 \2", texto)
+        # Inserir quebra antes de palavras-chave que indicam novo campo
+        for chave in ("Tipo:", "Nível:", "Ano:", "Ano de obtenção:",
+                      "Início:", "Fim:", "Período:", "Status:",
+                      "Categoria:", "Área:", "Subárea:", "Especialidade:"):
+            texto = texto.replace(chave, f"\n  {chave}")
+        return texto.strip()
+
     def _formatar_lista(itens: list, limite: int = 10) -> str:
+        """Cada item vira um parágrafo limpo separado por dupla quebra."""
         linhas = []
         for item in itens[:limite]:
             if isinstance(item, dict):
@@ -460,8 +579,11 @@ def _montar_secoes(dados: dict) -> list[dict]:
             else:
                 texto = str(item).strip()
             if texto:
-                linhas.append(texto)
-        return "\n".join(linhas)
+                texto_limpo = _limpar_item(texto)
+                if texto_limpo:
+                    linhas.append(texto_limpo)
+        # Cada item separado por dupla quebra para virar parágrafo no template
+        return "\n\n".join(linhas)
 
     mapeamento = [
         ("formacao", "Formação Acadêmica", 10),
@@ -483,6 +605,6 @@ def _montar_secoes(dados: dict) -> list[dict]:
             if conteudo:
                 secoes.append({"titulo": titulo, "conteudo": conteudo})
         elif isinstance(valor, str) and valor.strip():
-            secoes.append({"titulo": titulo, "conteudo": valor.strip()})
+            secoes.append({"titulo": titulo, "conteudo": _limpar_item(valor)})
 
     return secoes
