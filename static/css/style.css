@@ -2166,6 +2166,49 @@ a:hover { color: var(--accent-secondary); }
     text-align: center;
 }
 
+/* Sugestões de tributo (IA) */
+.sugestoes-box {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: var(--accent-soft);
+    border: 1px dashed var(--border-accent);
+    border-radius: var(--radius-md);
+}
+
+.sugestoes-titulo {
+    font-size: 0.85rem;
+    color: var(--accent-primary);
+    margin: 0 0 0.75rem 0;
+    font-weight: 500;
+}
+
+#sugestoesLista {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.sugestao-card {
+    text-align: left;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    padding: 0.85rem 1rem;
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+    font-size: 0.92rem;
+    line-height: 1.6;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    width: 100%;
+}
+
+.sugestao-card:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--accent-primary);
+    transform: translateX(2px);
+}
+
 /* Accordions: progressive disclosure (Maciel et al., 2019) */
 .memorial-explorar {
     max-width: 800px;

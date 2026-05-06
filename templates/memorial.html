@@ -225,11 +225,39 @@
                     <input type="text" name="autor" id="autor" class="form-input"
                            maxlength="80" required>
                 </div>
+
+                {# ── Sugestão assistida (plano de trabalho — composição
+                     assistida com IA, Monteiro et al., 2024) ── #}
+                <div class="form-group">
+                    <label class="form-label">Sua relação com {{ memorial.nome.split()[0] }}</label>
+                    <select id="relacaoSelect" class="form-input">
+                        <option value="">Selecione (opcional)</option>
+                        <option value="colega">Colega</option>
+                        <option value="ex-aluno">Ex-aluno(a)</option>
+                        <option value="aluno atual">Aluno(a) atual</option>
+                        <option value="orientando">Orientando(a)</option>
+                        <option value="amigo">Amigo(a)</option>
+                        <option value="familiar">Familiar</option>
+                        <option value="admirador">Admirador(a) do trabalho</option>
+                        <option value="leitor">Leitor(a) de produções</option>
+                    </select>
+                    <button type="button" class="btn-mini" id="btnSugerir"
+                            style="margin-top:0.5rem"
+                            data-url="{{ url_for('api_sugerir_tributos', memorial_id=memorial.id) }}">
+                        ✨ Sugerir mensagem com IA
+                    </button>
+                </div>
+
+                <div id="sugestoesBox" class="sugestoes-box" style="display:none">
+                    <p class="sugestoes-titulo">💡 Clique em uma sugestão para usar:</p>
+                    <div id="sugestoesLista"></div>
+                </div>
+
                 <div class="form-group">
                     <label for="mensagem" class="form-label">Sua mensagem</label>
                     <textarea name="mensagem" id="mensagem" class="form-textarea"
-                              rows="4" maxlength="1000" required
-                              placeholder="{% if is_memorializado %}Compartilhe uma lembrança ou uma palavra de despedida...{% else %}Deixe uma palavra de reconhecimento...{% endif %}"></textarea>
+                              rows="5" maxlength="1000" required
+                              placeholder="{% if is_memorializado %}Compartilhe uma lembrança ou uma palavra de despedida... ou clique em ✨ Sugerir acima.{% else %}Deixe uma palavra de reconhecimento... ou clique em ✨ Sugerir acima.{% endif %}"></textarea>
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn-gerar">
@@ -237,8 +265,12 @@
                     </button>
                 </div>
                 <p class="form-hint">
+                    {% if memorial.auto_aprovar_tributos %}
+                    Mensagens são publicadas imediatamente.
+                    {% else %}
                     Mensagens passam por moderação antes de serem publicadas
                     (Maciel et al., 2019 — recomendação de curadoria humana).
+                    {% endif %}
                 </p>
             </form>
         </details>
@@ -277,6 +309,54 @@ function compartilhar() {
             .then(() => mostrarToast('✓ Link copiado para a área de transferência!'))
             .catch(() => mostrarToast('Copie o link na barra do navegador.'));
     }
+}
+
+// ── Sugestão assistida de tributos via IA ─────────────────────────
+const btnSugerir = document.getElementById('btnSugerir');
+if (btnSugerir) {
+    btnSugerir.addEventListener('click', async () => {
+        const relacao = document.getElementById('relacaoSelect').value;
+        const url = btnSugerir.dataset.url;
+        const box = document.getElementById('sugestoesBox');
+        const lista = document.getElementById('sugestoesLista');
+
+        btnSugerir.disabled = true;
+        const textoOriginal = btnSugerir.innerHTML;
+        btnSugerir.innerHTML = '⏳ Gerando sugestões...';
+
+        try {
+            const fd = new FormData();
+            fd.append('relacao', relacao);
+            const resp = await fetch(url, { method: 'POST', body: fd });
+            const data = await resp.json();
+
+            if (data.erro || !data.sugestoes || !data.sugestoes.length) {
+                mostrarToast('Não foi possível gerar sugestões agora. Tente escrever uma mensagem original.');
+                return;
+            }
+
+            lista.innerHTML = '';
+            data.sugestoes.forEach((s) => {
+                const card = document.createElement('button');
+                card.type = 'button';
+                card.className = 'sugestao-card';
+                card.textContent = s;
+                card.addEventListener('click', () => {
+                    document.getElementById('mensagem').value = s;
+                    document.getElementById('mensagem').focus();
+                    box.style.display = 'none';
+                    mostrarToast('Sugestão aplicada! Edite à vontade antes de enviar.');
+                });
+                lista.appendChild(card);
+            });
+            box.style.display = 'block';
+        } catch (e) {
+            mostrarToast('Erro ao gerar sugestões. Tente de novo.');
+        } finally {
+            btnSugerir.disabled = false;
+            btnSugerir.innerHTML = textoOriginal;
+        }
+    });
 }
 </script>
 {% endblock %}

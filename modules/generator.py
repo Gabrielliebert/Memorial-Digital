@@ -298,8 +298,111 @@ def _formatar_dados_para_prompt(dados: dict) -> str:
 
 
 # ═══════════════════════════════════════════════════════════════════
-# Sanitização e validação
+# Sugestão assistida de tributos (Monteiro et al., 2024;
+# Maciel et al., 2019 — IA generativa para composição de homenagens)
 # ═══════════════════════════════════════════════════════════════════
+
+def sugerir_tributos(memorial: dict, relacao: str, n: int = 3) -> list[str]:
+    """
+    Pede à IA que sugira N mensagens de tributo curtas para o memorial,
+    respeitando a relação informada pelo usuário (colega, ex-aluno,
+    familiar, etc.) e o status do memorial (ativo/memorializado).
+
+    Embasamento: plano de trabalho 2025/2026 — "compor mensagens de
+    tributo em linguagem natural" (Monteiro). Maciel et al. (2019) —
+    composição assistida que reduz fricção sem substituir a curadoria
+    humana (usuário sempre edita antes de enviar).
+
+    Args:
+        memorial: dict com nome, memorial_status, etc.
+        relacao: como o autor se relaciona com a pessoa
+                 (ex: "colega", "ex-aluno", "familiar", "amigo")
+        n: quantas sugestões gerar (default 3)
+
+    Returns:
+        Lista de strings — cada string é uma sugestão de mensagem.
+        Se a IA falhar, retorna lista vazia (frontend trata).
+    """
+    nome = memorial.get("nome", "")
+    primeiro_nome = nome.split()[0] if nome else ""
+    status = memorial.get("memorial_status", "ativo")
+    relacao_limpa = (relacao or "").strip().lower()[:40]
+
+    # Tom conforme status
+    if status == "memorializado":
+        contexto_tom = (
+            "Esta é uma mensagem em memória de alguém que faleceu. "
+            "Use tom de despedida e reconhecimento, no PASSADO."
+        )
+    else:
+        contexto_tom = (
+            "Esta é uma mensagem para um perfil profissional ativo. "
+            "Use tom de reconhecimento e admiração, no PRESENTE."
+        )
+
+    # Contexto sobre a pessoa (resumo curto + área se houver)
+    resumo_pessoa = (memorial.get("texto_principal") or "")[:300]
+
+    prompt = f"""/no_think
+
+Tarefa: gerar {n} sugestões DIFERENTES de mensagens curtas de tributo
+para um memorial digital.
+
+CONTEXTO:
+- Nome do(a) homenageado(a): {nome}
+- Sobre a pessoa: {resumo_pessoa}
+- Sua relação com {primeiro_nome}: {relacao_limpa or 'pessoa próxima'}
+- Tom: {contexto_tom}
+
+REGRAS RÍGIDAS:
+1. Em português do Brasil. Nunca em inglês.
+2. Cada mensagem: 1 a 3 frases. No máximo 60 palavras.
+3. Mensagens DIFERENTES entre si — variar tom (formal/afetuoso/breve).
+4. Não invente fatos sobre a pessoa. Use APENAS o que está no contexto.
+5. Sem markdown. Sem aspas. Sem títulos.
+6. Comece direto na mensagem (NÃO escreva "Mensagem 1:" nem numere).
+
+FORMATO DE SAÍDA — separe as {n} mensagens por exatamente:
+|||
+
+Exemplo de saída para n=3:
+Mensagem mais formal aqui em uma ou duas frases.|||Mensagem mais afetuosa aqui em uma ou duas frases.|||Mensagem mais breve aqui em uma frase.
+
+Responda APENAS as {n} mensagens separadas por |||."""
+
+    try:
+        if config.LLM_PROVIDER == "gemini":
+            url = (
+                f"https://generativelanguage.googleapis.com/v1beta/models/"
+                f"{config.GEMINI_MODEL}:generateContent?key={config.GEMINI_API_KEY}"
+            )
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": 0.7,  # alta: queremos variação
+                    "maxOutputTokens": 400,
+                    "responseMimeType": "text/plain",
+                },
+            }
+            r = requests.post(url, json=payload, timeout=30)
+            r.raise_for_status()
+            data = r.json()
+            partes = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+            texto = "".join(p.get("text", "") for p in partes).strip()
+        else:
+            texto = _chamar_ollama(prompt)
+
+        # Limpar e dividir
+        texto = _strip_thinking(texto)
+        texto = _limpar_markdown(texto)
+        sugestoes = [s.strip() for s in texto.split("|||") if s.strip()]
+        # Filtra sugestões muito curtas ou muito longas
+        sugestoes = [s for s in sugestoes if 20 <= len(s) <= 500]
+        return sugestoes[:n]
+
+    except Exception as e:
+        print(f"[Sugerir Tributo] ✗ Erro: {e}")
+        return []
 
 def _sanitizar_texto(texto: str, nome: str) -> str:
     """Limpa o texto bruto da IA: remove markdown, thinking, ruído."""

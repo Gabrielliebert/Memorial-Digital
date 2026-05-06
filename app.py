@@ -27,7 +27,7 @@ from models import init_db, salvar_memorial, buscar_memorial, listar_memoriais, 
     moderar_tributo, deletar_tributo, contar_tributos_pendentes
 from modules.sources import coletar_lattes_completo
 from modules.sources.manual import construir_dados_manuais, construir_dados_de_json
-from modules.generator import gerar_memorial
+from modules.generator import gerar_memorial, sugerir_tributos
 
 # ── Inicialização ────────────────────────────────────
 app = Flask(__name__)
@@ -251,6 +251,27 @@ def configurar_memorial(memorial_id):
         return redirect(url_for("configurar_memorial", memorial_id=memorial_id))
 
     return render_template("configurar.html", memorial=memorial)
+
+
+@app.route("/memorial/<int:memorial_id>/sugerir-tributos", methods=["POST"])
+def api_sugerir_tributos(memorial_id):
+    """
+    Retorna JSON com sugestões de mensagens de tributo geradas pela IA.
+    Embasamento: plano de trabalho — composição assistida (Monteiro et al.).
+    """
+    memorial = buscar_memorial(memorial_id)
+    if not memorial:
+        return jsonify({"erro": "Memorial não encontrado"}), 404
+
+    relacao = ""
+    if request.is_json:
+        relacao = (request.json or {}).get("relacao", "")
+    if not relacao:
+        relacao = request.form.get("relacao", "")
+    sugestoes = sugerir_tributos(memorial, relacao.strip(), n=3)
+    if not sugestoes:
+        return jsonify({"erro": "Não foi possível gerar sugestões agora"}), 503
+    return jsonify({"sugestoes": sugestoes})
 
 
 @app.route("/memorial/<int:memorial_id>/tributo", methods=["POST"])
