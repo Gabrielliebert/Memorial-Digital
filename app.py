@@ -24,7 +24,7 @@ import config
 from models import init_db, salvar_memorial, buscar_memorial, listar_memoriais, \
     atualizar_memorial, deletar_memorial, buscar_memoriais_por_nome, \
     atualizar_configuracao_memorial, adicionar_tributo, listar_tributos, \
-    moderar_tributo, deletar_tributo
+    moderar_tributo, deletar_tributo, contar_tributos_pendentes
 from modules.sources import coletar_lattes_completo
 from modules.sources.manual import construir_dados_manuais, construir_dados_de_json
 from modules.generator import gerar_memorial
@@ -223,8 +223,10 @@ def ver_memorial(memorial_id):
     is_moderador = request.args.get("mod") == "1"
 
     tributos = listar_tributos(memorial_id, apenas_aprovados=True)
+    pendentes = contar_tributos_pendentes(memorial_id) if is_moderador else 0
     return render_template("memorial.html", memorial=memorial,
-                           tributos=tributos, is_moderador=is_moderador)
+                           tributos=tributos, is_moderador=is_moderador,
+                           tributos_pendentes=pendentes)
 
 
 @app.route("/memorial/<int:memorial_id>/configurar", methods=["GET", "POST"])
@@ -243,6 +245,7 @@ def configurar_memorial(memorial_id):
             legacy_manager_email=request.form.get("legacy_manager_email", "").strip() or None,
             consentimento=1 if request.form.get("consentimento") else 0,
             permitir_tributos=1 if request.form.get("permitir_tributos") else 0,
+            auto_aprovar_tributos=1 if request.form.get("auto_aprovar_tributos") else 0,
         )
         flash("Configurações atualizadas.", "sucesso")
         return redirect(url_for("configurar_memorial", memorial_id=memorial_id))
@@ -273,8 +276,17 @@ def enviar_tributo(memorial_id):
         flash("Mensagem muito longa (máx. 1000 caracteres).", "erro")
         return redirect(url_for("ver_memorial", memorial_id=memorial_id))
 
-    adicionar_tributo(memorial_id, autor, mensagem)
-    flash("Tributo recebido! Aguardando moderação antes de ser publicado.", "sucesso")
+    auto = bool(memorial.get("auto_aprovar_tributos"))
+    _id, status_final = adicionar_tributo(memorial_id, autor, mensagem,
+                                          auto_aprovar=auto)
+    if status_final == "aprovado":
+        flash("Mensagem publicada!", "sucesso")
+    else:
+        flash(
+            "Mensagem recebida! Aguardando moderação do criador do memorial "
+            "antes de aparecer publicamente.",
+            "info"
+        )
     return redirect(url_for("ver_memorial", memorial_id=memorial_id))
 
 

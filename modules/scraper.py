@@ -11,16 +11,82 @@ import config
 
 
 def _avisar_captcha():
-    """Toca um beep e avisa o usuário sobre o CAPTCHA."""
+    """Toca beep, traz a janela do Chromium pra frente e avisa via console."""
     if sys.platform == "win32":
         try:
             import winsound
             winsound.MessageBeep(winsound.MB_ICONASTERISK)
         except Exception:
             pass
+        # Força a janela do Chromium ao primeiro plano via Win32 API.
+        # Usa ctypes para evitar dependência externa (pywin32).
+        _forcar_foco_chromium_windows()
     print("\n" + "=" * 60)
     print(" 🔔 RESOLVA O CAPTCHA NA JANELA DO CHROMIUM AGORA")
     print("=" * 60 + "\n")
+
+
+def _forcar_foco_chromium_windows():
+    """
+    No Windows, busca a janela do Chromium (título contém "RESOLVA O CAPTCHA")
+    e força ela ao primeiro plano via SetForegroundWindow + ShowWindow.
+
+    Workaround: o Windows protege contra "foco-roubo", então precisamos
+    "destravar" anexando à thread do foreground atual (AttachThreadInput).
+    """
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        user32 = ctypes.windll.user32
+        kernel32 = ctypes.windll.kernel32
+
+        # Buscar janela cujo título começa com o nosso marcador
+        EnumWindowsProc = ctypes.WINFUNCTYPE(
+            ctypes.c_bool, wintypes.HWND, wintypes.LPARAM
+        )
+        encontrada = []
+
+        def callback(hwnd, _):
+            if user32.IsWindowVisible(hwnd):
+                length = user32.GetWindowTextLengthW(hwnd)
+                if length > 0:
+                    buf = ctypes.create_unicode_buffer(length + 1)
+                    user32.GetWindowTextW(hwnd, buf, length + 1)
+                    if "RESOLVA O CAPTCHA" in buf.value:
+                        encontrada.append(hwnd)
+                        return False
+            return True
+
+        user32.EnumWindows(EnumWindowsProc(callback), 0)
+
+        if not encontrada:
+            return
+
+        hwnd = encontrada[0]
+
+        # AttachThreadInput trick para contornar proteção anti-foco-roubo
+        SW_RESTORE = 9
+        fg = user32.GetForegroundWindow()
+        target_thread = user32.GetWindowThreadProcessId(hwnd, None)
+        current_thread = kernel32.GetCurrentThreadId()
+        fg_thread = user32.GetWindowThreadProcessId(fg, None) if fg else 0
+
+        user32.AttachThreadInput(current_thread, target_thread, True)
+        if fg_thread and fg_thread != current_thread:
+            user32.AttachThreadInput(fg_thread, target_thread, True)
+
+        user32.ShowWindow(hwnd, SW_RESTORE)
+        user32.SetForegroundWindow(hwnd)
+        user32.BringWindowToTop(hwnd)
+        user32.SetFocus(hwnd)
+
+        user32.AttachThreadInput(current_thread, target_thread, False)
+        if fg_thread and fg_thread != current_thread:
+            user32.AttachThreadInput(fg_thread, target_thread, False)
+
+    except Exception as e:
+        print(f"[Scraper] ⚠ Não consegui forçar foco do Chromium: {e}")
 
 
 async def scrape_lattes(url: str) -> str:

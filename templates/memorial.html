@@ -90,8 +90,8 @@
                 🖨️ Imprimir
             </button>
             {% if not is_moderador %}
-            <a href="?mod=1" class="btn-mini btn-mini-mod" title="Acessar ferramentas de moderação">
-                🛠️ Sou o criador
+            <a href="?mod=1" class="btn-mini btn-mini-mod" title="Editar, configurar e moderar este memorial">
+                ⚙️ Gerenciar
             </a>
             {% endif %}
         </div>
@@ -100,8 +100,17 @@
              Embasamento: Trevisan et al. (2021) — separar visualização de
              edição. Visitante não precisa ver Editar/Regenerar/Remover. #}
         {% if is_moderador %}
+        {% if tributos_pendentes > 0 %}
+        <div class="alert-pendentes">
+            🔔 <strong>{{ tributos_pendentes }}</strong> mensagem(s) aguardando sua aprovação.
+            <a href="{{ url_for('moderar_tributos', memorial_id=memorial.id) }}"
+               class="btn-mini" style="margin-left:0.75rem">
+                Moderar agora →
+            </a>
+        </div>
+        {% endif %}
         <div class="moderator-bar">
-            <span class="moderator-label">🛠️ Modo moderador ativo</span>
+            <span class="moderator-label">⚙️ Modo gerenciar ativo</span>
             <div class="moderator-actions">
                 <a href="{{ url_for('editar_memorial', memorial_id=memorial.id) }}"
                    class="btn-mod btn-mod-primary" title="Editar memorial">
@@ -115,7 +124,10 @@
                 <a href="{{ url_for('configurar_memorial', memorial_id=memorial.id) }}"
                    class="btn-mod" title="Configurar privacidade">⚙️ Configurar</a>
                 <a href="{{ url_for('moderar_tributos', memorial_id=memorial.id) }}"
-                   class="btn-mod" title="Moderar mensagens">💬 Mensagens</a>
+                   class="btn-mod" title="Moderar mensagens">
+                    💬 Mensagens
+                    {% if tributos_pendentes > 0 %}<span class="badge-pendentes">{{ tributos_pendentes }}</span>{% endif %}
+                </a>
                 <a href="{{ url_for('ver_dados', memorial_id=memorial.id) }}"
                    class="btn-mod" title="Ver dados extraídos">📊 Dados</a>
                 <form action="{{ url_for('remover_memorial', memorial_id=memorial.id) }}"
@@ -124,7 +136,7 @@
                     <button type="submit" class="btn-mod btn-mod-danger" title="Remover">🗑️ Remover</button>
                 </form>
                 <a href="{{ url_for('ver_memorial', memorial_id=memorial.id) }}"
-                   class="btn-mod" title="Voltar à visualização normal">👁️ Sair do modo mod</a>
+                   class="btn-mod" title="Voltar à visualização normal">👁️ Sair</a>
             </div>
         </div>
         {% endif %}

@@ -74,6 +74,7 @@ def init_db():
         ("data_falecimento", "TEXT"),
         ("memorializado_em", "TEXT"),
         ("foto_url", "TEXT"),
+        ("auto_aprovar_tributos", "INTEGER DEFAULT 0"),
     ]
     cols_existentes = {row["name"] for row in conn.execute("PRAGMA table_info(memoriais)")}
     for nome_col, definicao in colunas_novas:
@@ -161,7 +162,7 @@ def atualizar_configuracao_memorial(memorial_id: int, **campos) -> bool:
     """
     permitidos = {
         "visibilidade", "memorial_status", "legacy_manager_email",
-        "consentimento", "permitir_tributos",
+        "consentimento", "permitir_tributos", "auto_aprovar_tributos",
         "data_nascimento", "data_falecimento",
     }
     updates = []
@@ -194,18 +195,42 @@ def atualizar_configuracao_memorial(memorial_id: int, **campos) -> bool:
 
 # ── Tributos ──────────────────────────────────────────
 
-def adicionar_tributo(memorial_id: int, autor: str, mensagem: str) -> int:
-    """Adiciona um tributo (status inicial: pendente, aguardando moderação)."""
+def adicionar_tributo(memorial_id: int, autor: str, mensagem: str,
+                      auto_aprovar: bool = False) -> tuple[int, str]:
+    """
+    Adiciona um tributo. Status inicial:
+    - 'aprovado' se auto_aprovar=True (configuração do memorial)
+    - 'pendente' caso contrário (aguarda moderação humana)
+
+    Embasamento: Maciel et al. (2019) recomenda curadoria humana para
+    espaços de luto, mas usuário pode optar por auto-aprovação para
+    memoriais menos sensíveis (ex: perfil profissional ativo).
+
+    Returns:
+        Tupla (tributo_id, status_inicial).
+    """
+    status = "aprovado" if auto_aprovar else "pendente"
     conn = get_db()
     cursor = conn.execute(
         """INSERT INTO tributos (memorial_id, autor, mensagem, status)
-           VALUES (?, ?, ?, 'pendente')""",
-        (memorial_id, autor.strip()[:80], mensagem.strip()[:1000]),
+           VALUES (?, ?, ?, ?)""",
+        (memorial_id, autor.strip()[:80], mensagem.strip()[:1000], status),
     )
     tributo_id = cursor.lastrowid
     conn.commit()
     conn.close()
-    return tributo_id
+    return tributo_id, status
+
+
+def contar_tributos_pendentes(memorial_id: int) -> int:
+    """Conta quantos tributos estão aguardando moderação."""
+    conn = get_db()
+    row = conn.execute(
+        "SELECT COUNT(*) as n FROM tributos WHERE memorial_id = ? AND status = 'pendente'",
+        (memorial_id,),
+    ).fetchone()
+    conn.close()
+    return row["n"] if row else 0
 
 
 def listar_tributos(memorial_id: int, apenas_aprovados: bool = True) -> list:
