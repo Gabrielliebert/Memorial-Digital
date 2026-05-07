@@ -14,7 +14,7 @@ O sistema foi estruturado em isoladas camadas de pipeline em um sistema não-blo
 ## 🛡️ Destaques do Projeto 
 
 * **Anti-Alucinação Inteligente:** Foi implementada uma forte diretriz no System Prompt proibindo explicitamente o modelo de inferir datas e produções falsas. E também, valida-se o retorno iterando pelos anos relatados para auditar as criações via `_validar_resultado()`!
-* **High-Context Processing Window:** Com atualizações da janela de contexto para +1M de tokens, os limites truncados foram ajustados no `config.py` permitindo memoriais profundos e riquíssimos.
+* **High-Context Processing Window:** Com atualizações da janela de contexto para +1M de tokens, os limites truncados foram ajustados no `config.py` permitindo memoriais mais profundos.
 * **Resiliência e Fallback Embutidos (`generator.py`)**: Caso a API retorne restrições de requisições `429` (Rate limits) ou overload `503`, há Retry e Backoff Exponencial antes de repassar a inferência a um modelo mais leve da Família Flash ou Flash-Lite de modo imperceptível. 
 * **WAL-mode (Write-Ahead Logging)**: A base em SQLite possibilita que threads múltiplas não gerem "Database Locked" ou causem latência durante o andamento da requisição HTTP.
 
@@ -37,4 +37,3 @@ python app.py
 ```
 
 Você acessar a porta gerada localmente pelo servidor Flask!
-Aproveite o pipeline modular com rastreabilidade nos Memoriais construídos!
