@@ -20,9 +20,15 @@ RETRY_BASE_DELAY = 3
 
 def gerar_memorial(dados: dict, status: str = "ativo") -> dict:
     """
-    Gera o texto do memorial. SEMPRE chama a IA para criar uma síntese
-    nova — não copia o resumo original. Se a IA falhar, usa fallback
-    determinístico simples.
+    Gera o memorial. Memorial NÃO é currículo: a IA faz curadoria.
+
+    Estrutura:
+    - texto_principal: resumo curto (1 frase) — síntese da identidade
+    - destaques: 3 a 5 marcos curados pela IA (não lista completa)
+    - titulo: adequado ao status
+
+    Listas completas (formação, atuação, projetos, etc.) NÃO entram
+    no memorial — quem quer carreira completa vai no Lattes.
 
     Args:
         dados: Dicionário canônico com dados do titular.
@@ -31,11 +37,11 @@ def gerar_memorial(dados: dict, status: str = "ativo") -> dict:
     nome = dados.get("nome", "Pesquisador(a)")
     print(f"[Gerador] === Gerando memorial para {nome} | status={status} | provider={config.LLM_PROVIDER} ===")
 
-    # Etapa 1: a IA gera o texto narrativo (síntese, não cópia)
+    # Etapa 1: a IA gera o resumo curto (síntese da identidade)
     texto_principal, metadata = _gerar_narrativa_via_ia(dados, status)
 
-    # Etapa 2: seções são sempre montadas em código (organizadas, sem alucinação)
-    secoes = _montar_secoes(dados)
+    # Etapa 2: a IA cura os destaques (3-5 marcos do legado)
+    destaques = selecionar_destaques(dados, status)
 
     # Etapa 3: título adequado ao status
     titulo = (
@@ -46,10 +52,205 @@ def gerar_memorial(dados: dict, status: str = "ativo") -> dict:
     resultado = {
         "titulo": titulo,
         "texto_principal": texto_principal,
-        "secoes": secoes,
+        # 'secoes' (legado) → agora 'destaques' curados pela IA.
+        # Para retrocompat com banco/templates antigos, mantemos a chave
+        # 'secoes' nula. Templates novos usam 'destaques'.
+        "secoes": [],
+        "destaques": destaques,
         "metadata": metadata,
     }
     return resultado
+
+
+def selecionar_destaques(dados: dict, status: str = "ativo",
+                          max_destaques: int = 5) -> list[dict]:
+    """
+    Curadoria pela IA: seleciona os marcos mais definidores do legado.
+
+    A premissa (feedback do orientador Prof. Cristiano Maciel): memorial
+    digital NÃO é currículo. Quem quer trajetória completa visita o Lattes.
+    O memorial deve apresentar o ESSENCIAL — o que define essa pessoa.
+
+    Categorias possíveis de destaque:
+    - formacao: o título acadêmico mais alto
+    - atuacao: a função/instituição mais marcante
+    - premio: reconhecimento mais relevante (prioridade alta — orientador
+      sugeriu que prêmios são bons candidatos)
+    - projeto: contribuição prática mais significativa
+    - producao: obra de referência (livro, artigo seminal)
+    - legado: contribuição definidora (área inovadora, instituição fundada)
+
+    Cada destaque é: {tipo, titulo, descricao, ano?}.
+
+    Se a IA falhar, retorna fallback determinístico (prêmios mais recentes
+    + 1 formação + 1 atuação).
+    """
+    nome = dados.get("nome", "Pesquisador(a)")
+    dados_texto = _formatar_dados_para_prompt(dados)
+
+    if status == "memorializado":
+        instrucao_tom = "Esta é uma homenagem póstuma. Tom de tributo."
+        verbo_legado = "marcou a trajetória de"
+    else:
+        instrucao_tom = "Este é um perfil ativo, biográfico."
+        verbo_legado = "define a trajetória de"
+
+    exemplo_json = (
+        '['
+        '{"tipo":"premio","titulo":"Prêmio Carreira em IHC",'
+        '"descricao":"Reconhecimento da SBC pela contribuição à área","ano":"2023"},'
+        '{"tipo":"projeto","titulo":"Grupo DAVI – Dados Além da Vida",'
+        '"descricao":"Coordenação de grupo de pesquisa em legado digital pós-morte","ano":"2010"},'
+        '{"tipo":"atuacao","titulo":"Professor Titular – UFMT",'
+        '"descricao":"Atuação no Instituto de Computação","ano":""},'
+        '{"tipo":"producao","titulo":"Livro \\"Legado Digital\\"",'
+        '"descricao":"Obra de referência sobre dados pós-morte","ano":"2019"},'
+        '{"tipo":"formacao","titulo":"Doutorado em Ciência da Computação",'
+        '"descricao":"PUC-Rio","ano":"2008"}'
+        ']'
+    )
+
+    prompt = f"""/no_think
+
+Tarefa: selecionar de 3 a 5 MARCOS que melhor {verbo_legado} {nome}.
+
+CONTEXTO: você está curando um MEMORIAL DIGITAL, não um currículo.
+Quem quer a trajetória completa visita o Lattes. Aqui mostramos APENAS
+o essencial — o que esta pessoa tem de mais notável.
+
+{instrucao_tom}
+
+REGRAS RÍGIDAS:
+1. SELECIONE entre 3 e 5 destaques. Não menos, não mais.
+2. Priorize: PRÊMIOS importantes + projetos/contribuições marcantes +
+   o título acadêmico mais alto + 1 atuação principal.
+3. NÃO liste todas as produções, todas as orientações, todas as áreas.
+4. Cada destaque deve ser INDIVIDUALMENTE notável (não um item qualquer
+   da carreira).
+5. Use APENAS dados reais dos DADOS abaixo. Nunca invente.
+6. Português do Brasil. Sem markdown. Sem aspas decorativas.
+7. Cada "descricao" curta: 1 frase, no máximo 20 palavras.
+8. tipo deve ser um destes valores exatos: formacao, atuacao, premio,
+   projeto, producao, legado.
+9. RESPONDA APENAS o JSON (array de objetos). Sem comentários.
+
+EXEMPLO de saída válida (não copie literalmente — adapte aos dados):
+{exemplo_json}
+
+DADOS DE {nome.upper()}:
+
+{dados_texto}
+
+Responda APENAS o JSON array dos destaques."""
+
+    try:
+        if config.LLM_PROVIDER == "gemini":
+            url = (
+                f"https://generativelanguage.googleapis.com/v1beta/models/"
+                f"{config.GEMINI_MODEL}:generateContent?key={config.GEMINI_API_KEY}"
+            )
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {
+                    "temperature": 0.3,
+                    "maxOutputTokens": 1200,
+                    "responseMimeType": "application/json",
+                },
+            }
+            r = requests.post(url, json=payload, timeout=60)
+            r.raise_for_status()
+            data = r.json()
+            partes = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+            texto = "".join(p.get("text", "") for p in partes).strip()
+        else:
+            texto = _chamar_ollama(prompt)
+
+        texto = _strip_thinking(texto)
+        texto = re.sub(r"^```(?:json)?\s*", "", texto)
+        texto = re.sub(r"\s*```$", "", texto)
+
+        destaques_raw = json.loads(texto)
+        if not isinstance(destaques_raw, list):
+            raise ValueError("IA retornou não-lista")
+
+        destaques = []
+        tipos_validos = {"formacao", "atuacao", "premio", "projeto",
+                         "producao", "legado"}
+        for item in destaques_raw[:max_destaques]:
+            if not isinstance(item, dict):
+                continue
+            tipo = str(item.get("tipo", "legado")).lower().strip()
+            if tipo not in tipos_validos:
+                tipo = "legado"
+            titulo = _limpar_markdown(str(item.get("titulo", "")).strip())
+            descricao = _limpar_markdown(str(item.get("descricao", "")).strip())
+            ano = str(item.get("ano", "")).strip()
+            if titulo and len(titulo) <= 200:
+                destaques.append({
+                    "tipo": tipo,
+                    "titulo": titulo,
+                    "descricao": descricao[:300],
+                    "ano": ano[:20],
+                })
+
+        if 3 <= len(destaques) <= max_destaques:
+            print(f"[Gerador] ✓ {len(destaques)} destaques curados pela IA")
+            return destaques
+
+        print(f"[Gerador] ⚠ Curadoria IA inválida ({len(destaques)} itens). Fallback.")
+
+    except Exception as e:
+        print(f"[Gerador] ✗ Erro na curadoria: {e}")
+
+    return _destaques_fallback(dados)
+
+
+def _destaques_fallback(dados: dict) -> list[dict]:
+    """
+    Fallback determinístico de destaques quando a IA falha.
+    Pega: 1 formação principal + 1 atuação principal + até 3 prêmios.
+    """
+    destaques = []
+
+    # 1 formação principal (a primeira = mais alta no Lattes)
+    formacao = dados.get("formacao", [])
+    if formacao:
+        primeira = formacao[0]
+        descr = primeira.get("descricao") if isinstance(primeira, dict) else str(primeira)
+        if descr:
+            destaques.append({
+                "tipo": "formacao",
+                "titulo": descr[:180],
+                "descricao": "",
+                "ano": "",
+            })
+
+    # 1 atuação principal
+    atuacao = dados.get("atuacao_profissional", [])
+    if atuacao:
+        primeira = atuacao[0]
+        descr = primeira.get("descricao") if isinstance(primeira, dict) else str(primeira)
+        if descr:
+            destaques.append({
+                "tipo": "atuacao",
+                "titulo": descr[:180],
+                "descricao": "",
+                "ano": "",
+            })
+
+    # Até 3 prêmios
+    premios = dados.get("premios", [])
+    for p in premios[:3]:
+        descr = p.get("descricao") if isinstance(p, dict) else str(p)
+        if descr:
+            destaques.append({
+                "tipo": "premio",
+                "titulo": descr[:180],
+                "descricao": "",
+                "ano": "",
+            })
+
+    return destaques[:5]
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -115,7 +316,7 @@ def _chamar_gemini(prompt: str) -> str:
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
             "temperature": 0.2,  # baixa: queremos formato fixo, não criatividade
-            "maxOutputTokens": 80,  # ~25 palavras max — UMA frase
+            "maxOutputTokens": 100,  # ~25 palavras max — UMA frase
             "responseMimeType": "text/plain",
         },
     }
@@ -221,7 +422,7 @@ def _construir_prompt_resumo(dados: dict, status: str) -> str:
 
     prompt = f"""/no_think
 
-Tarefa: escrever UMA frase curta descrevendo a trajetória profissional desta pessoa.
+Tarefa: escrever DUAS frases curtas descrevendo a trajetória profissional desta pessoa.
 
 FORMATO OBRIGATÓRIO:
 "[Profissão] na área de [ÁREA GENERALISTA], {verbo_atuar.lower()} principalmente em [foco principal de atuação]."
@@ -231,7 +432,7 @@ REGRAS — viole qualquer uma e a resposta será rejeitada:
 1. NÃO COMECE com o nome da pessoa. O nome já aparece em destaque acima.
    Comece DIRETAMENTE com a profissão (ex: "Professor e pesquisador...").
 
-2. UMA frase apenas. Máximo 30 palavras. Ponto final.
+2. Duas frases apenas. Máximo 50 palavras.
 
 3. ÁREA = uma destas categorias generalistas (escolha UMA):
    Computação | Engenharia | Educação | Saúde | Direito | Artes

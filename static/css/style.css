@@ -2670,6 +2670,130 @@ a:hover { color: var(--accent-secondary); }
     padding: 0 1rem;
 }
 
+/* ═══════════════════════════════════════════════════
+   Destaques curados (memorial NÃO é currículo)
+   ═══════════════════════════════════════════════════ */
+.memorial-destaques {
+    max-width: 800px;
+    margin: 2.5rem auto 3rem;
+    padding: 0 2rem;
+}
+
+.destaques-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.destaque-card {
+    display: flex;
+    gap: 1.25rem;
+    align-items: flex-start;
+    padding: 1.25rem 1.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    border-left: 4px solid var(--accent-primary);
+    transition: all var(--transition-fast);
+}
+
+.destaque-card:hover {
+    background: var(--bg-card-hover);
+    transform: translateX(2px);
+    box-shadow: var(--shadow-sm);
+}
+
+/* Cor da borda esquerda muda por tipo de destaque */
+.destaque-premio    { border-left-color: #fbbf24; }  /* dourado */
+.destaque-projeto   { border-left-color: #60a5fa; }  /* azul */
+.destaque-formacao  { border-left-color: #8b7cf5; }  /* roxo (acento) */
+.destaque-atuacao   { border-left-color: #4ade80; }  /* verde */
+.destaque-producao  { border-left-color: #f97316; }  /* laranja */
+.destaque-legado    { border-left-color: #ec4899; }  /* rosa */
+
+.destaque-icone {
+    font-size: 2rem;
+    line-height: 1;
+    flex-shrink: 0;
+    padding-top: 0.15rem;
+}
+
+.destaque-conteudo {
+    flex: 1;
+    min-width: 0;
+}
+
+.destaque-rotulo {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+}
+
+.destaque-ano {
+    font-weight: 400;
+    color: var(--text-muted);
+}
+
+.destaque-titulo {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.4rem 0;
+    line-height: 1.4;
+}
+
+.destaque-descricao {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    margin: 0;
+}
+
+/* Link "Ver currículo no Lattes" — externalização (não duplicar) */
+.lattes-link-wrap {
+    text-align: center;
+    margin-top: 1.75rem;
+    padding-top: 1.5rem;
+    border-top: 1px dashed var(--border-light);
+}
+
+.lattes-link {
+    display: inline-flex;
+    padding: 0.6rem 1.25rem;
+    font-size: 0.88rem;
+    font-weight: 500;
+}
+
+/* Edição de destaques no editar.html */
+.destaque-edit {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    margin-bottom: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.destaque-edit-row {
+    display: flex;
+    gap: 0.55rem;
+}
+
+.destaque-tipo-select { flex: 0 0 38%; }
+.destaque-ano-input   { flex: 1; }
+
+.destaque-edit .btn-action {
+    align-self: flex-end;
+    font-size: 0.78rem;
+    padding: 0.35rem 0.75rem;
+}
+
 /* Accordions: progressive disclosure (Maciel et al., 2019) */
 .memorial-explorar {
     max-width: 800px;

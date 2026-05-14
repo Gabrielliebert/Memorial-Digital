@@ -1,23 +1,23 @@
 {#
-  ═══════════════════════════════════════════════════════════════════
-  Memorial — Layout reorganizado conforme princípios de design para
-  memoriais digitais.
+═══════════════════════════════════════════════════════════════════
+Memorial — Layout reorganizado conforme princípios de design para
+memoriais digitais.
 
-  Estrutura inspirada em:
-  - Lopes, Maciel & Pereira (2014) — "Virtual Homage to the Dead":
-    identidade essencial (foto + nome + breve identificação) deve ser
-    o foco inicial.
-  - Maciel et al. (2019) — "Recomendações para o design de memórias
-    digitais na web social": progressive disclosure (revelar info
-    gradualmente, não tudo de uma vez).
-  - Trevisan et al. (2021) — "Perspectives on interaction with dead
-    users' profiles": importância de separar visualização de edição.
-  - Verhalen et al. (2021) — "One Profile, Many Memories" (Participatory
-    Design): usuários querem ver MENOS informação inicial, com opção
-    de aprofundar.
-  - Monteiro et al. (2024) — "Preserving Memories Together": artefatos
-    para memoriais digitais coletivos com curadoria.
-  ═══════════════════════════════════════════════════════════════════
+Estrutura inspirada em:
+- Lopes, Maciel & Pereira (2014) — "Virtual Homage to the Dead":
+identidade essencial (foto + nome + breve identificação) deve ser
+o foco inicial.
+- Maciel et al. (2019) — "Recomendações para o design de memórias
+digitais na web social": progressive disclosure (revelar info
+gradualmente, não tudo de uma vez).
+- Trevisan et al. (2021) — "Perspectives on interaction with dead
+users' profiles": importância de separar visualização de edição.
+- Verhalen et al. (2021) — "One Profile, Many Memories" (Participatory
+Design): usuários querem ver MENOS informação inicial, com opção
+de aprofundar.
+- Monteiro et al. (2024) — "Preserving Memories Together": artefatos
+para memoriais digitais coletivos com curadoria.
+═══════════════════════════════════════════════════════════════════
 #}
 {% extends "base.html" %}
 {% block title %}{{ memorial.titulo or 'Memorial' }}{% endblock %}
@@ -38,9 +38,8 @@
             {% endif %}
 
             {% if memorial.foto_url %}
-            <img src="{{ memorial.foto_url }}" alt="{{ memorial.nome }}"
-                 class="memorial-foto-lg"
-                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <img src="{{ memorial.foto_url }}" alt="{{ memorial.nome }}" class="memorial-foto-lg"
+                onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
             <div class="memorial-avatar-lg" style="display:none">
                 {{ memorial.nome[0] if memorial.nome else '?' }}
             </div>
@@ -68,9 +67,9 @@
         <div class="memorial-resumo-curto">
             <div class="quote-mark">"</div>
             {% for paragrafo in memorial.texto_principal.split('\n') %}
-                {% if paragrafo.strip() %}
-                <p>{{ paragrafo }}</p>
-                {% endif %}
+            {% if paragrafo.strip() %}
+            <p>{{ paragrafo }}</p>
+            {% endif %}
             {% endfor %}
         </div>
 
@@ -99,29 +98,28 @@
                 🖨️ Imprimir
             </button>
             {% if not is_moderador %}
-            <a href="{{ url_for('painel_memorial', memorial_id=memorial.id) }}"
-               class="btn-mini btn-mini-mod"
-               title="Painel administrativo">
+            <a href="{{ url_for('painel_memorial', memorial_id=memorial.id) }}" class="btn-mini btn-mini-mod"
+                title="Painel administrativo">
                 ⚙️ Gerenciar
             </a>
             {% endif %}
         </div>
 
         {# ── Ações do MODERADOR — apenas com ?mod=1
-             Embasamento: Trevisan et al. (2021) — separar visualização de
-             edição. Visitante não precisa ver Editar/Regenerar/Remover. #}
+        Embasamento: Trevisan et al. (2021) — separar visualização de
+        edição. Visitante não precisa ver Editar/Regenerar/Remover. #}
         {% if is_moderador %}
         {# Quando entra via ?mod=1 mostra apenas botão para ir ao painel
-           administrativo. O resto das ações ficou no painel. #}
+        administrativo. O resto das ações ficou no painel. #}
         <div class="moderator-bar">
             <span class="moderator-label">⚙️ Modo gerenciar ativo</span>
             <div class="moderator-actions">
-                <a href="{{ url_for('painel_memorial', memorial_id=memorial.id) }}"
-                   class="btn-mod btn-mod-primary" title="Abrir painel administrativo">
+                <a href="{{ url_for('painel_memorial', memorial_id=memorial.id) }}" class="btn-mod btn-mod-primary"
+                    title="Abrir painel administrativo">
                     🛠️ Abrir painel
                 </a>
-                <a href="{{ url_for('ver_memorial', memorial_id=memorial.id) }}"
-                   class="btn-mod btn-mod-sair" title="Sair do modo gerenciar">
+                <a href="{{ url_for('ver_memorial', memorial_id=memorial.id) }}" class="btn-mod btn-mod-sair"
+                    title="Sair do modo gerenciar">
                     ✕ Sair do modo gerenciar
                 </a>
             </div>
@@ -129,16 +127,15 @@
         {% endif %}
 
         {# ── Galeria de fotos (Walter, 2015: luto multimídia;
-             plano de trabalho — coleta multimodal) ── #}
+        plano de trabalho — coleta multimodal) ── #}
         {% if fotos %}
         <div class="memorial-galeria">
             <h2 class="explorar-titulo">📸 Galeria</h2>
             <div class="galeria-grid">
                 {% for f in fotos %}
                 <figure class="galeria-item" onclick="abrirLightbox({{ loop.index0 }})">
-                    <img src="{{ f.foto_url }}" alt="{{ f.legenda or memorial.nome }}"
-                         loading="lazy"
-                         onerror="this.parentElement.style.display='none'">
+                    <img src="{{ f.foto_url }}" alt="{{ f.legenda or memorial.nome }}" loading="lazy"
+                        onerror="this.parentElement.style.display='none'">
                     {% if f.legenda %}
                     <figcaption class="galeria-legenda">{{ f.legenda }}</figcaption>
                     {% endif %}
@@ -157,26 +154,105 @@
         </div>
         {% endif %}
 
-        {# ── Seções expansíveis (Maciel et al., 2019: progressive disclosure) ── #}
-        {% if memorial.secoes %}
-        <div class="memorial-explorar">
+        {# ── Destaques curados pela IA ── #}
+        {#  Memorial não é currículo. A IA seleciona 3 a 5 marcos que
+            definem o legado. Quem quer trajetória completa: link Lattes #}
+        {% if memorial.destaques %}
+        <div class="memorial-destaques">
             <h2 class="explorar-titulo">
-                Saiba mais sobre {{ memorial.nome.split()[0] }}
+                {% if is_memorializado %}🕯️ Marcos do legado{% else %}✨ Marcos da trajetória{% endif %}
             </h2>
             <p class="explorar-subtitulo">
-                Clique nos cartões abaixo para revelar mais sobre a trajetória.
+                {% if is_memorializado %}
+                Os momentos mais marcantes que {{ memorial.nome.split()[0] }} deixou.
+                {% else %}
+                Os pontos mais notáveis selecionados pela curadoria.
+                {% endif %}
             </p>
 
+            {% set icones_destaque = {
+                'formacao': '🎓',
+                'atuacao': '💼',
+                'premio': '🏆',
+                'projeto': '📋',
+                'producao': '📚',
+                'legado': '⭐'
+            } %}
+            {% set rotulos_destaque = {
+                'formacao': 'Formação',
+                'atuacao': 'Atuação',
+                'premio': 'Reconhecimento',
+                'projeto': 'Projeto / Contribuição',
+                'producao': 'Obra',
+                'legado': 'Legado'
+            } %}
+
+            <div class="destaques-lista">
+                {% for d in memorial.destaques %}
+                <article class="destaque-card destaque-{{ d.tipo }}">
+                    <div class="destaque-icone">
+                        {{ icones_destaque.get(d.tipo, '⭐') }}
+                    </div>
+                    <div class="destaque-conteudo">
+                        <div class="destaque-rotulo">
+                            {{ rotulos_destaque.get(d.tipo, 'Marco') }}
+                            {% if d.ano %}<span class="destaque-ano"> · {{ d.ano }}</span>{% endif %}
+                        </div>
+                        <h3 class="destaque-titulo">{{ d.titulo }}</h3>
+                        {% if d.descricao %}
+                        <p class="destaque-descricao">{{ d.descricao }}</p>
+                        {% endif %}
+                    </div>
+                </article>
+                {% endfor %}
+            </div>
+
+            {# Link externo: quem quer ver currículo completo, vai no Lattes #}
+            {% if memorial.url_lattes and 'lattes.cnpq' in memorial.url_lattes %}
+            <p class="lattes-link-wrap">
+                <a href="{{ memorial.url_lattes }}" target="_blank" rel="noopener"
+                   class="btn-mini lattes-link">
+                    🔗 Ver currículo completo no Lattes
+                </a>
+            </p>
+            {% endif %}
+        </div>
+        {% elif memorial.url_lattes and 'lattes.cnpq' in memorial.url_lattes %}
+        {# Sem destaques mas tem Lattes — ainda mostra o link #}
+        <div class="memorial-destaques">
+            <p class="lattes-link-wrap">
+                <a href="{{ memorial.url_lattes }}" target="_blank" rel="noopener"
+                   class="btn-mini lattes-link">
+                    🔗 Ver currículo completo no Lattes
+                </a>
+            </p>
+        </div>
+        {% endif %}
+
+        {# Bloco de compatibilidade com memoriais antigos (gerados antes da curadoria) #}
+        {% if memorial.secoes and not memorial.destaques %}
+        <div class="memorial-explorar">
+            <details class="accordion" style="margin-top:1rem">
+                <summary class="accordion-header">
+                    <span class="accordion-icon">ℹ️</span>
+                    <span class="accordion-title">Dados detalhados (memorial gerado antes da curadoria)</span>
+                    <span class="accordion-arrow">▾</span>
+                </summary>
+                <div class="accordion-body">
+                    <p class="text-muted" style="margin-bottom:1rem">
+                        Este memorial foi gerado em uma versão antiga.
+                        Use <strong>Regenerar</strong> no painel para aplicar a curadoria.
+                    </p>
             <div class="accordions">
                 {% set icones = {
-                    'Formação Acadêmica': '🎓',
-                    'Atuação Profissional': '💼',
-                    'Áreas de Atuação': '🔬',
-                    'Projetos': '📋',
-                    'Orientações': '👥',
-                    'Produções Bibliográficas': '📚',
-                    'Prêmios e Títulos': '🏆',
-                    'Idiomas': '🌐'
+                'Formação Acadêmica': '🎓',
+                'Atuação Profissional': '💼',
+                'Áreas de Atuação': '🔬',
+                'Projetos': '📋',
+                'Orientações': '👥',
+                'Produções Bibliográficas': '📚',
+                'Prêmios e Títulos': '🏆',
+                'Idiomas': '🌐'
                 } %}
 
                 {% for secao in memorial.secoes %}
@@ -188,14 +264,16 @@
                     </summary>
                     <div class="accordion-body">
                         {% for paragrafo in secao.conteudo.split('\n') %}
-                            {% if paragrafo.strip() %}
-                            <p>{{ paragrafo }}</p>
-                            {% endif %}
+                        {% if paragrafo.strip() %}
+                        <p>{{ paragrafo }}</p>
+                        {% endif %}
                         {% endfor %}
                     </div>
                 </details>
                 {% endfor %}
             </div>
+                </div>
+            </details>
         </div>
         {% endif %}
     </section>
@@ -235,16 +313,15 @@
             <summary class="btn-gerar tributo-form-toggle">
                 {% if is_memorializado %}🕯️ Deixar um tributo{% else %}💌 Deixar um tributo{% endif %}
             </summary>
-            <form action="{{ url_for('enviar_tributo', memorial_id=memorial.id) }}"
-                  method="POST" class="manual-form" style="margin-top:1rem">
+            <form action="{{ url_for('enviar_tributo', memorial_id=memorial.id) }}" method="POST" class="manual-form"
+                style="margin-top:1rem">
                 <div class="form-group">
                     <label for="autor" class="form-label">Seu nome</label>
-                    <input type="text" name="autor" id="autor" class="form-input"
-                           maxlength="80" required>
+                    <input type="text" name="autor" id="autor" class="form-input" maxlength="80" required>
                 </div>
 
                 {# ── Sugestão assistida (plano de trabalho — composição
-                     assistida com IA, Monteiro et al., 2024) ── #}
+                assistida com IA, Monteiro et al., 2024) ── #}
                 <div class="form-group">
                     <label class="form-label">Sua relação com {{ memorial.nome.split()[0] }}</label>
                     <select id="relacaoSelect" class="form-input">
@@ -258,9 +335,8 @@
                         <option value="admirador">Admirador(a) do trabalho</option>
                         <option value="leitor">Leitor(a) de produções</option>
                     </select>
-                    <button type="button" class="btn-mini" id="btnSugerir"
-                            style="margin-top:0.5rem"
-                            data-url="{{ url_for('api_sugerir_tributos', memorial_id=memorial.id) }}">
+                    <button type="button" class="btn-mini" id="btnSugerir" style="margin-top:0.5rem"
+                        data-url="{{ url_for('api_sugerir_tributos', memorial_id=memorial.id) }}">
                         ✨ Sugerir mensagem com IA
                     </button>
                 </div>
@@ -272,9 +348,8 @@
 
                 <div class="form-group">
                     <label for="mensagem" class="form-label">Seu tributo</label>
-                    <textarea name="mensagem" id="mensagem" class="form-textarea"
-                              rows="5" maxlength="1000" required
-                              placeholder="{% if is_memorializado %}Compartilhe uma lembrança, palavra de despedida ou reconhecimento ao legado...{% else %}Deixe uma palavra de admiração, respeito ou reconhecimento...{% endif %}"></textarea>
+                    <textarea name="mensagem" id="mensagem" class="form-textarea" rows="5" maxlength="1000" required
+                        placeholder="{% if is_memorializado %}Compartilhe uma lembrança, palavra de despedida ou reconhecimento ao legado...{% else %}Deixe uma palavra de admiração, respeito ou reconhecimento...{% endif %}"></textarea>
                 </div>
                 <div class="form-actions">
                     <button type="submit" class="btn-gerar">
@@ -294,118 +369,118 @@
 
 {% block scripts %}
 <script>
-function mostrarToast(msg) {
-    const toast = document.getElementById('copyToast');
-    toast.textContent = msg;
-    toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 2500);
-}
-
-function copiarTexto() {
-    const paragrafos = document.querySelectorAll('.memorial-resumo-curto p');
-    const texto = Array.from(paragrafos).map(p => p.textContent.trim()).join('\n\n');
-    navigator.clipboard.writeText(texto)
-        .then(() => mostrarToast('✓ Texto copiado para a área de transferência!'))
-        .catch(() => mostrarToast('Não foi possível copiar automaticamente.'));
-}
-
-function compartilhar() {
-    const url = window.location.href;
-    if (navigator.share) {
-        navigator.share({ title: document.title, url: url });
-    } else {
-        navigator.clipboard.writeText(url)
-            .then(() => mostrarToast('✓ Link copiado para a área de transferência!'))
-            .catch(() => mostrarToast('Copie o link na barra do navegador.'));
+    function mostrarToast(msg) {
+        const toast = document.getElementById('copyToast');
+        toast.textContent = msg;
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2500);
     }
-}
 
-// ── Lightbox da galeria ────────────────────────────────────────────
-const fotosGaleria = [
-    {% for f in fotos %}
-    { url: "{{ f.foto_url|e }}", legenda: "{{ (f.legenda or '')|e }}" }{% if not loop.last %},{% endif %}
+    function copiarTexto() {
+        const paragrafos = document.querySelectorAll('.memorial-resumo-curto p');
+        const texto = Array.from(paragrafos).map(p => p.textContent.trim()).join('\n\n');
+        navigator.clipboard.writeText(texto)
+            .then(() => mostrarToast('✓ Texto copiado para a área de transferência!'))
+            .catch(() => mostrarToast('Não foi possível copiar automaticamente.'));
+    }
+
+    function compartilhar() {
+        const url = window.location.href;
+        if (navigator.share) {
+            navigator.share({ title: document.title, url: url });
+        } else {
+            navigator.clipboard.writeText(url)
+                .then(() => mostrarToast('✓ Link copiado para a área de transferência!'))
+                .catch(() => mostrarToast('Copie o link na barra do navegador.'));
+        }
+    }
+
+    // ── Lightbox da galeria ────────────────────────────────────────────
+    const fotosGaleria = [
+        {% for f in fotos %}
+    { url: "{{ f.foto_url|e }}", legenda: "{{ (f.legenda or '')|e }}" } {% if not loop.last %}, {% endif %}
     {% endfor %}
 ];
-let lightboxIdx = 0;
+    let lightboxIdx = 0;
 
-function abrirLightbox(idx) {
-    if (!fotosGaleria.length) return;
-    lightboxIdx = idx;
-    const lb = document.getElementById('lightbox');
-    const img = document.getElementById('lightboxImg');
-    const leg = document.getElementById('lightboxLegenda');
-    img.src = fotosGaleria[idx].url;
-    leg.textContent = fotosGaleria[idx].legenda;
-    leg.style.display = fotosGaleria[idx].legenda ? 'block' : 'none';
-    lb.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-}
+    function abrirLightbox(idx) {
+        if (!fotosGaleria.length) return;
+        lightboxIdx = idx;
+        const lb = document.getElementById('lightbox');
+        const img = document.getElementById('lightboxImg');
+        const leg = document.getElementById('lightboxLegenda');
+        img.src = fotosGaleria[idx].url;
+        leg.textContent = fotosGaleria[idx].legenda;
+        leg.style.display = fotosGaleria[idx].legenda ? 'block' : 'none';
+        lb.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
 
-function fecharLightbox() {
-    document.getElementById('lightbox').style.display = 'none';
-    document.body.style.overflow = '';
-}
+    function fecharLightbox() {
+        document.getElementById('lightbox').style.display = 'none';
+        document.body.style.overflow = '';
+    }
 
-function navegarLightbox(delta) {
-    if (!fotosGaleria.length) return;
-    lightboxIdx = (lightboxIdx + delta + fotosGaleria.length) % fotosGaleria.length;
-    abrirLightbox(lightboxIdx);
-}
+    function navegarLightbox(delta) {
+        if (!fotosGaleria.length) return;
+        lightboxIdx = (lightboxIdx + delta + fotosGaleria.length) % fotosGaleria.length;
+        abrirLightbox(lightboxIdx);
+    }
 
-// Setas do teclado
-document.addEventListener('keydown', (e) => {
-    if (document.getElementById('lightbox')?.style.display !== 'flex') return;
-    if (e.key === 'Escape') fecharLightbox();
-    if (e.key === 'ArrowLeft') navegarLightbox(-1);
-    if (e.key === 'ArrowRight') navegarLightbox(1);
-});
-
-// ── Sugestão assistida de tributos via IA ─────────────────────────
-const btnSugerir = document.getElementById('btnSugerir');
-if (btnSugerir) {
-    btnSugerir.addEventListener('click', async () => {
-        const relacao = document.getElementById('relacaoSelect').value;
-        const url = btnSugerir.dataset.url;
-        const box = document.getElementById('sugestoesBox');
-        const lista = document.getElementById('sugestoesLista');
-
-        btnSugerir.disabled = true;
-        const textoOriginal = btnSugerir.innerHTML;
-        btnSugerir.innerHTML = '⏳ Gerando sugestões...';
-
-        try {
-            const fd = new FormData();
-            fd.append('relacao', relacao);
-            const resp = await fetch(url, { method: 'POST', body: fd });
-            const data = await resp.json();
-
-            if (data.erro || !data.sugestoes || !data.sugestoes.length) {
-                mostrarToast('Não foi possível gerar sugestões agora. Tente escrever uma mensagem original.');
-                return;
-            }
-
-            lista.innerHTML = '';
-            data.sugestoes.forEach((s) => {
-                const card = document.createElement('button');
-                card.type = 'button';
-                card.className = 'sugestao-card';
-                card.textContent = s;
-                card.addEventListener('click', () => {
-                    document.getElementById('mensagem').value = s;
-                    document.getElementById('mensagem').focus();
-                    box.style.display = 'none';
-                    mostrarToast('Sugestão aplicada! Edite à vontade antes de enviar.');
-                });
-                lista.appendChild(card);
-            });
-            box.style.display = 'block';
-        } catch (e) {
-            mostrarToast('Erro ao gerar sugestões. Tente de novo.');
-        } finally {
-            btnSugerir.disabled = false;
-            btnSugerir.innerHTML = textoOriginal;
-        }
+    // Setas do teclado
+    document.addEventListener('keydown', (e) => {
+        if (document.getElementById('lightbox')?.style.display !== 'flex') return;
+        if (e.key === 'Escape') fecharLightbox();
+        if (e.key === 'ArrowLeft') navegarLightbox(-1);
+        if (e.key === 'ArrowRight') navegarLightbox(1);
     });
-}
+
+    // ── Sugestão assistida de tributos via IA ─────────────────────────
+    const btnSugerir = document.getElementById('btnSugerir');
+    if (btnSugerir) {
+        btnSugerir.addEventListener('click', async () => {
+            const relacao = document.getElementById('relacaoSelect').value;
+            const url = btnSugerir.dataset.url;
+            const box = document.getElementById('sugestoesBox');
+            const lista = document.getElementById('sugestoesLista');
+
+            btnSugerir.disabled = true;
+            const textoOriginal = btnSugerir.innerHTML;
+            btnSugerir.innerHTML = '⏳ Gerando sugestões...';
+
+            try {
+                const fd = new FormData();
+                fd.append('relacao', relacao);
+                const resp = await fetch(url, { method: 'POST', body: fd });
+                const data = await resp.json();
+
+                if (data.erro || !data.sugestoes || !data.sugestoes.length) {
+                    mostrarToast('Não foi possível gerar sugestões agora. Tente escrever uma mensagem original.');
+                    return;
+                }
+
+                lista.innerHTML = '';
+                data.sugestoes.forEach((s) => {
+                    const card = document.createElement('button');
+                    card.type = 'button';
+                    card.className = 'sugestao-card';
+                    card.textContent = s;
+                    card.addEventListener('click', () => {
+                        document.getElementById('mensagem').value = s;
+                        document.getElementById('mensagem').focus();
+                        box.style.display = 'none';
+                        mostrarToast('Sugestão aplicada! Edite à vontade antes de enviar.');
+                    });
+                    lista.appendChild(card);
+                });
+                box.style.display = 'block';
+            } catch (e) {
+                mostrarToast('Erro ao gerar sugestões. Tente de novo.');
+            } finally {
+                btnSugerir.disabled = false;
+                btnSugerir.innerHTML = textoOriginal;
+            }
+        });
+    }
 </script>
 {% endblock %}

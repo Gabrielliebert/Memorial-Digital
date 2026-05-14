@@ -95,31 +95,45 @@
             </div>
         </div>
 
-        <!-- Seções ────────────────────────── -->
+        <!-- Destaques (marcos curados) ─────── -->
         <div class="config-section">
-            <h2 class="config-section-title">📚 Seções</h2>
+            <h2 class="config-section-title">⭐ Marcos selecionados</h2>
             <p class="config-section-desc">
-                Cada seção aparece como bloco separado no memorial.
-                Deixe vazio para remover.
+                Memorial não é currículo: liste apenas os 3 a 5 marcos mais
+                definidores do legado. Tipo aceito:
+                <code>premio</code>, <code>projeto</code>, <code>formacao</code>,
+                <code>atuacao</code>, <code>producao</code>, <code>legado</code>.
+                Para regenerar com IA, use o botão "Regenerar" abaixo.
             </p>
 
-            <div id="secoesContainer">
-                {% for s in memorial.secoes or [] %}
-                <div class="secao-edit">
-                    <input type="text" name="secao_titulo_{{ loop.index0 }}"
-                           class="form-input" placeholder="Título da seção"
-                           value="{{ s.titulo }}">
-                    <textarea name="secao_conteudo_{{ loop.index0 }}"
-                              class="form-textarea" rows="4"
-                              placeholder="Conteúdo">{{ s.conteudo }}</textarea>
+            <div id="destaquesContainer">
+                {% for d in memorial.destaques or [] %}
+                <div class="destaque-edit">
+                    <div class="destaque-edit-row">
+                        <select name="destaque_tipo_{{ loop.index0 }}" class="form-input destaque-tipo-select">
+                            {% set tipos = ['premio','projeto','formacao','atuacao','producao','legado'] %}
+                            {% for t in tipos %}
+                            <option value="{{ t }}" {% if d.tipo == t %}selected{% endif %}>{{ t }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" name="destaque_ano_{{ loop.index0 }}"
+                               class="form-input destaque-ano-input"
+                               placeholder="Ano (opcional)" value="{{ d.ano or '' }}" maxlength="20">
+                    </div>
+                    <input type="text" name="destaque_titulo_{{ loop.index0 }}"
+                           class="form-input" placeholder="Título do marco (ex: Prêmio X)"
+                           value="{{ d.titulo }}" maxlength="200">
+                    <textarea name="destaque_descricao_{{ loop.index0 }}"
+                              class="form-textarea" rows="2"
+                              placeholder="Descrição curta (1 frase)" maxlength="300">{{ d.descricao }}</textarea>
                     <button type="button" class="btn-action btn-delete"
-                            onclick="this.parentElement.remove()">🗑️ Remover</button>
+                            onclick="this.parentElement.remove()">🗑️ Remover marco</button>
                 </div>
                 {% endfor %}
             </div>
 
-            <button type="button" class="btn-action btn-edit" onclick="adicionarSecao()">
-                ➕ Adicionar seção
+            <button type="button" class="btn-action btn-edit" onclick="adicionarDestaque()">
+                ➕ Adicionar marco
             </button>
         </div>
 
@@ -147,23 +161,37 @@
 
 {% block scripts %}
 <script>
-let proximoIdx = {{ (memorial.secoes or [])|length }};
+let proximoDestaqueIdx = {{ (memorial.destaques or [])|length }};
 
-function adicionarSecao() {
-    const c = document.getElementById('secoesContainer');
+function adicionarDestaque() {
+    const c = document.getElementById('destaquesContainer');
     const div = document.createElement('div');
-    div.className = 'secao-edit';
+    div.className = 'destaque-edit';
+    const i = proximoDestaqueIdx;
     div.innerHTML = `
-        <input type="text" name="secao_titulo_${proximoIdx}"
-               class="form-input" placeholder="Título da seção">
-        <textarea name="secao_conteudo_${proximoIdx}"
-                  class="form-textarea" rows="4"
-                  placeholder="Conteúdo"></textarea>
+        <div class="destaque-edit-row">
+            <select name="destaque_tipo_${i}" class="form-input destaque-tipo-select">
+                <option value="premio">premio</option>
+                <option value="projeto">projeto</option>
+                <option value="formacao">formacao</option>
+                <option value="atuacao">atuacao</option>
+                <option value="producao">producao</option>
+                <option value="legado">legado</option>
+            </select>
+            <input type="text" name="destaque_ano_${i}"
+                   class="form-input destaque-ano-input"
+                   placeholder="Ano (opcional)" maxlength="20">
+        </div>
+        <input type="text" name="destaque_titulo_${i}"
+               class="form-input" placeholder="Título do marco" maxlength="200">
+        <textarea name="destaque_descricao_${i}"
+                  class="form-textarea" rows="2"
+                  placeholder="Descrição curta (1 frase)" maxlength="300"></textarea>
         <button type="button" class="btn-action btn-delete"
-                onclick="this.parentElement.remove()">🗑️ Remover</button>
+                onclick="this.parentElement.remove()">🗑️ Remover marco</button>
     `;
     c.appendChild(div);
-    proximoIdx++;
+    proximoDestaqueIdx++;
 }
 
 // Mostra campo de upload só quando "upload" está selecionado

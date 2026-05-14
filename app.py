@@ -594,16 +594,30 @@ def editar_memorial(memorial_id):
         data_nascimento = request.form.get("data_nascimento") or ""
         data_falecimento = request.form.get("data_falecimento") or ""
 
-        # Seções dinâmicas
-        secoes = []
+        # Destaques dinâmicos (substituem as antigas "seções")
+        destaques = []
         idx = 0
+        tipos_validos = {"premio", "projeto", "formacao", "atuacao",
+                         "producao", "legado"}
         while True:
-            t = request.form.get(f"secao_titulo_{idx}")
-            c = request.form.get(f"secao_conteudo_{idx}")
-            if t is None and c is None:
+            tipo = request.form.get(f"destaque_tipo_{idx}")
+            titulo = request.form.get(f"destaque_titulo_{idx}")
+            descricao = request.form.get(f"destaque_descricao_{idx}")
+            ano = request.form.get(f"destaque_ano_{idx}")
+            # Sai do loop quando não há mais campos
+            if (tipo is None and titulo is None and
+                    descricao is None and ano is None):
                 break
-            if t and c:
-                secoes.append({"titulo": t.strip(), "conteudo": c.strip()})
+            if titulo and titulo.strip():
+                t_lim = (tipo or "legado").strip().lower()
+                if t_lim not in tipos_validos:
+                    t_lim = "legado"
+                destaques.append({
+                    "tipo": t_lim,
+                    "titulo": titulo.strip()[:200],
+                    "descricao": (descricao or "").strip()[:300],
+                    "ano": (ano or "").strip()[:20],
+                })
             idx += 1
 
         # Foto: upload novo, manter, ou limpar
@@ -625,7 +639,7 @@ def editar_memorial(memorial_id):
             "nome": nome or None,
             "titulo": titulo,
             "texto_principal": texto_principal,
-            "secoes": secoes,
+            "destaques": destaques,
             "data_nascimento": data_nascimento,
             "data_falecimento": data_falecimento,
         }
@@ -662,6 +676,7 @@ def regenerar_memorial(memorial_id):
             titulo=resultado.get("titulo"),
             texto_principal=resultado.get("texto_principal"),
             secoes=resultado.get("secoes"),
+            destaques=resultado.get("destaques"),
         )
         flash("Memorial regenerado com sucesso!", "sucesso")
     except Exception as e:

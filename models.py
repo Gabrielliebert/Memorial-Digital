@@ -98,6 +98,7 @@ def init_db():
         ("memorializado_em", "TEXT"),
         ("foto_url", "TEXT"),
         ("auto_aprovar_tributos", "INTEGER DEFAULT 0"),
+        ("destaques_json", "TEXT"),
     ]
     cols_existentes = {row["name"] for row in conn.execute("PRAGMA table_info(memoriais)")}
     for nome_col, definicao in colunas_novas:
@@ -143,8 +144,9 @@ def salvar_memorial(nome: str, origem: str, dados: dict, resultado: dict,
         INSERT INTO memoriais (nome, url_lattes, dados_json, titulo,
                                texto_principal, secoes_json, metadata_json,
                                fonte, memorial_status, data_nascimento,
-                               data_falecimento, memorializado_em, foto_url)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                               data_falecimento, memorializado_em, foto_url,
+                               destaques_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             nome,
@@ -160,6 +162,7 @@ def salvar_memorial(nome: str, origem: str, dados: dict, resultado: dict,
             data_falecimento,
             memorializado_em,
             foto_final,
+            json.dumps(resultado.get("destaques", []), ensure_ascii=False),
         ),
     )
     memorial_id = cursor.lastrowid
@@ -484,7 +487,8 @@ def atualizar_memorial(memorial_id: int, titulo: str = None,
                        foto_url: str = None,
                        data_nascimento: str = None,
                        data_falecimento: str = None,
-                       nome: str = None) -> bool:
+                       nome: str = None,
+                       destaques: list = None) -> bool:
     """Atualiza campos editáveis de um memorial. Use string vazia para limpar."""
     conn = get_db()
     updates = []
@@ -511,6 +515,9 @@ def atualizar_memorial(memorial_id: int, titulo: str = None,
     if data_falecimento is not None:
         updates.append("data_falecimento = ?")
         params.append(data_falecimento or None)
+    if destaques is not None:
+        updates.append("destaques_json = ?")
+        params.append(json.dumps(destaques, ensure_ascii=False))
 
     if not updates:
         conn.close()
@@ -565,4 +572,11 @@ def _row_to_dict(row) -> dict:
             d["metadata"] = json.loads(d["metadata_json"])
         except json.JSONDecodeError:
             d["metadata"] = {}
+    if d.get("destaques_json"):
+        try:
+            d["destaques"] = json.loads(d["destaques_json"])
+        except json.JSONDecodeError:
+            d["destaques"] = []
+    else:
+        d["destaques"] = []
     return d
